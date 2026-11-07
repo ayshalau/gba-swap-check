@@ -1,0 +1,18 @@
+{
+  "name": "GBA Swap Check",
+  "short_name": "Swap Check",
+  "description": "Crew shift and duty swap validation with rule-based checks and record keeping",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef7f8",
+  "theme_color": "#A1E3E6",
+  "icons": [
+    {
+      "src": "swap-icon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

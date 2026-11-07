@@ -1,0 +1,3350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#A1E3E6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<title>GBA Swap Check</title>
+<style>
+  :root{
+    --bg:#eef7f8;
+    --panel:#ffffff;
+    --panel-2:#e7f4f5;
+    --line:#b7dadd;
+    --ink:#173a3f;
+    --muted:#5f7d80;
+    --gold:#0f7f88;
+    --gold-soft:#0a5c63;
+    --sky:#3d7f8a;
+    --danger:#c0392b;
+    --good:#2e7d4f;
+    --warn:#a06500;
+    --accent:#A1E3E6;
+    --radius:14px;
+    --shadow:0 1px 3px rgba(23,58,63,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  .hidden{display:none !important}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:Arial,Helvetica,sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    display:flex;flex-direction:column;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:Arial,Helvetica,sans-serif;font-weight:700;letter-spacing:.01em}
+  .mono,.flight,.num{font-family:"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace}
+
+  /* ---------- header ---------- */
+  header{
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#b5e6e9,var(--bg));
+    padding:18px 22px 0;
+  }
+  .brand-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;max-width:1180px;margin:0 auto;padding-bottom:14px}
+  .brand-id{display:flex;align-items:center;gap:12px}
+  .brand-logo{width:74px;height:53px;object-fit:contain;display:block;flex:0 0 auto}
+  .logotype{font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:700;letter-spacing:.06em;color:var(--gold-soft)}
+  .brand-sub{font-size:12px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-top:2px}
+  nav{display:flex;gap:2px;max-width:1180px;margin:0 auto;overflow-x:auto}
+  nav button{
+    appearance:none;background:transparent;border:none;cursor:pointer;
+    color:var(--muted);font-family:inherit;font-size:14px;
+    padding:10px 16px 12px;border-bottom:2px solid transparent;white-space:nowrap;
+  }
+  nav button:hover{color:var(--ink)}
+  nav button.active{color:var(--gold-soft);border-bottom-color:var(--accent)}
+
+  /* ---------- layout ---------- */
+  main{flex:1;width:100%;max-width:1180px;margin:0 auto;padding:26px 22px 60px}
+  section.view{display:none}
+  section.view.active{display:block}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    box-shadow:var(--shadow);
+  }
+  .panel + .panel{margin-top:16px}
+  .panel-title{font-size:17px;margin-bottom:14px;color:var(--ink)}
+  .hint{color:var(--muted);font-size:13px}
+  .muted{color:var(--muted)}
+
+  /* ---------- forms ---------- */
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  label.field{display:flex;flex-direction:column;gap:6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  label.field input, label.field select, label.field textarea{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font-family:inherit;font-size:15px;padding:10px 12px;outline:none;
+  }
+  label.field input:focus, label.field select:focus, label.field textarea:focus{border-color:var(--accent)}
+  label.field textarea{resize:vertical;min-height:64px}
+  input[type=date]::-webkit-calendar-picker-indicator,
+  input[type=datetime-local]::-webkit-calendar-picker-indicator,
+  input[type=time]::-webkit-calendar-picker-indicator{opacity:.55}
+
+  .btn{
+    appearance:none;cursor:pointer;border:1px solid transparent;border-radius:9px;
+    font-family:inherit;font-size:14px;padding:10px 16px;transition:filter .15s, background .15s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:#0a3a40;font-weight:600}
+  .btn-primary:hover{filter:brightness(.96)}
+  .btn-ghost{background:#fff;border-color:var(--line);color:var(--ink);box-shadow:var(--shadow)}
+  .btn-ghost:hover{background:var(--panel-2)}
+  .btn-danger{background:#fff;border-color:var(--danger);color:var(--danger)}
+  .btn-danger:hover{background:var(--danger);color:#fff}
+  .btn-mini{padding:4px 10px;font-size:12px;border-radius:7px}
+  .btn-sm{padding:7px 12px;font-size:13px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .row-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center}
+
+  /* ---------- crew / party panel ---------- */
+  .party{border:1px solid var(--line);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;background:var(--panel)}
+  /* the crew members sit side by side as columns */
+  #parties{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  #parties .party{margin-bottom:0}
+  .party-head{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:12px 16px;background:var(--panel-2);border-bottom:1px solid var(--line);
+  }
+  .party-head .who{font-weight:700;font-size:15px;color:var(--ink)}
+  .party-head .who .tag{display:block;font-size:11px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;font-weight:500}
+  .party-body{padding:14px 16px}
+
+  /* ---------- duty day rows (roster style) ---------- */
+  .duty-day{
+    display:flex;gap:10px;margin-bottom:8px;align-items:stretch;
+  }
+  /* the tick that says whether this duty day is part of the swap */
+  .duty-check{
+    flex:0 0 16px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .duty-check input{width:16px;height:16px;margin:0;cursor:pointer;accent-color:var(--gold)}
+  /* a duty day left out of the swap is dimmed */
+  .duty-day[data-selected="0"] .duty-card,
+  .duty-day[data-selected="0"] .duty-date{opacity:.4}
+  .duty-date{
+    position:relative;flex:0 0 46px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:1px;padding:8px 2px;border-radius:10px;
+    background:var(--panel-2);border:1px solid var(--line);cursor:pointer;
+  }
+  .duty-date .dow{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .duty-date .dom{font-size:20px;font-weight:700;line-height:1.1;color:var(--ink)}
+  /* the date input sits over the day number, so the card looks like the
+     crew roster app while the date stays editable */
+  .duty-date .d-date{
+    position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;
+    opacity:0;border:none;background:transparent;pointer-events:none;
+  }
+  .duty-date:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+  .duty-card{
+    flex:1 1 auto;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-end;
+    padding:10px 12px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);
+  }
+  /* a day off or a leave shows only the duty code — the card keeps the same
+     size as the others, but its duty field stays narrow */
+  .duty-day.compact .duty-card label{flex:0 0 auto;min-width:0}
+  .duty-day.compact .duty-card input{width:64px}
+  .duty-card label{
+    flex:1 1 84px;min-width:74px;display:flex;flex-direction:column;gap:4px;
+    font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  }
+  .duty-card input,.duty-card select{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font-family:inherit;font-size:13px;padding:8px 9px;width:100%;outline:none;
+    height:36px;   /* the same for every field, so every row is the same height */
+  }
+  .duty-card input:focus,.duty-card select:focus{border-color:var(--accent)}
+  /* a day with more than one sector needs room for the whole chain, so its
+     duty and sector take a line of their own */
+  .duty-day.multi .duty-card label.f-duty{flex:1 1 190px;min-width:170px}
+  .duty-day.multi .duty-card label.f-sector{flex:1 1 190px;min-width:170px}
+  .duty-card .row-del{flex:0 0 auto;align-self:center;margin-left:auto}
+  .row-del{
+    appearance:none;background:transparent;border:none;color:var(--muted);cursor:pointer;
+    font-size:18px;line-height:1;padding:4px 8px;border-radius:6px;
+  }
+  .row-del:hover{color:var(--danger);background:rgba(192,57,43,.1)}
+
+  /* ---------- crew cards ---------- */
+  .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .hist-head span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+  /* ---------- verdict ---------- */
+  .verdict{margin-top:18px;border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;background:var(--panel-2)}
+  .verdict.pass{border-color:rgba(46,125,79,.5);background:rgba(46,125,79,.08)}
+  .verdict.fail{border-color:rgba(192,57,43,.5);background:rgba(192,57,43,.08)}
+  .verdict-title{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:700}
+  .verdict.pass .verdict-title{color:var(--good)}
+  .verdict.fail .verdict-title{color:var(--danger)}
+  .verdict ul{margin:12px 0 0 18px;font-size:14px}
+  .verdict li{margin-bottom:5px}
+  .verdict li.pass{color:var(--good)}
+  .verdict li.fail{color:var(--danger)}
+  .verdict .sec{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:14px;font-weight:700}
+  .verdict .sec:first-of-type{margin-top:12px}
+
+  /* ---------- rules ---------- */
+  .rule-group{margin-bottom:20px}
+  .rule-group h3{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:10px}
+  .rule-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;box-shadow:var(--shadow);margin-bottom:10px;
+  }
+  .rule-card h4{font-size:14px;margin-bottom:6px;font-weight:700}
+  .rule-card .rule-text{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:8px}
+  .rule-card .rule-text ol,.rule-card .rule-text ul{margin-left:18px;color:var(--muted);font-size:13px}
+  .rule-card .rule-text li{margin-bottom:3px}
+  .rule-card .rule-line{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:6px 0;border-top:1px dashed var(--line);font-size:13px;
+  }
+  .rule-card .rule-line .val input{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font-family:inherit;font-size:13px;padding:6px 9px;width:120px;outline:none;
+  }
+  .rule-card .rule-line .val input:focus{border-color:var(--accent)}
+  .rule-card.off{opacity:.55}
+  .rule-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);user-select:none}
+  .rule-toggle input{width:15px;height:15px;accent-color:var(--gold);cursor:pointer}
+
+  /* ---------- records ---------- */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+  .toolbar select,.toolbar input{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);
+    font-family:inherit;font-size:14px;padding:9px 12px;outline:none;
+  }
+  .toolbar select:focus,.toolbar input:focus{border-color:var(--accent)}
+  .toolbar .spacer{flex:1}
+
+  .rec{
+    position:relative;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);
+  }
+  .rec-top{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:11px 16px;background:var(--panel-2);border-bottom:1px solid var(--line);
+  }
+  .rec-who{display:flex;align-items:center;gap:10px;min-width:0}
+  .rec-name{font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rec-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+  .rec-body{padding:11px 16px}
+  .rec-issues{margin:0 0 9px;padding-left:18px;font-size:13px;color:var(--ink)}
+  .rec-issues li{margin-bottom:3px}
+  .rec-issues li.more{list-style:none;margin-left:-18px;color:var(--muted)}
+  .rec-crew{display:flex;gap:10px;align-items:baseline;padding:5px 0;border-top:1px solid var(--line)}
+  .rec-crew-name{flex:0 0 120px;font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rec-crew-days{flex:1;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px}
+  .rec-actions{display:flex;gap:6px;justify-content:flex-end;padding:0 16px 12px}
+
+  /* ---------- roster import ---------- */
+  .drop-zone{
+    border:2px dashed var(--line);border-radius:var(--radius);background:var(--panel-2);
+    padding:30px 20px;text-align:center;transition:border-color .15s, background .15s;
+  }
+  .drop-zone.drag{border-color:var(--gold);background:#dff0f1}
+  .drop-zone.busy{opacity:.6;pointer-events:none}
+  .dz-icon{font-size:30px;color:var(--gold-soft);line-height:1;margin-bottom:8px}
+  .dz-main{font-size:16px;font-weight:700;color:var(--ink)}
+  .dz-sub{color:var(--muted);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin:8px 0}
+  .dz-hint{color:var(--muted);font-size:12px;margin-top:12px}
+
+  .ocr-progress{margin-top:16px}
+  .ocr-progress .bar{height:7px;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+  .ocr-progress .fill{height:100%;width:0;background:var(--accent);transition:width .25s}
+  .ocr-error{margin-top:16px;border:1px solid var(--danger);background:rgba(192,57,43,.08);color:var(--danger);border-radius:10px;padding:12px 14px;font-size:14px}
+
+  /* the editable rows use the same 12 columns as the roster sheet */
+  .ocr-row-head,.ocr-row{
+    display:grid;
+    grid-template-columns:128px 42px 92px 46px 108px 84px 84px 84px 84px 82px 82px 34px;
+    gap:6px;align-items:center;margin-bottom:8px;
+  }
+  .ocr-row-head{color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .ocr-row input,.ocr-row select{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font-family:inherit;font-size:13px;padding:8px 9px;width:100%;outline:none;
+  }
+  .ocr-row input:focus,.ocr-row select:focus{border-color:var(--accent)}
+  .ocr-row .low{background:rgba(192,57,43,.08);border-color:rgba(192,57,43,.35)}
+  .ocr-row-wrap{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;background:var(--panel)}
+  .ocr-row-wrap .ocr-row{margin-bottom:0}
+  .ocr-row-extra{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+  .ocr-row-extra label{display:flex;flex-direction:column;gap:4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .ocr-row-extra input{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font-family:inherit;font-size:13px;padding:7px 9px;width:100%;outline:none;
+  }
+  .ocr-row-extra input:focus{border-color:var(--accent)}
+
+  /* ---------- roster preview table ---------- */
+  .roster-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+  .roster-table{border-collapse:collapse;width:100%;min-width:760px;font-size:12px}
+  .roster-table th{
+    background:var(--panel-2);color:var(--gold-soft);font-size:10px;letter-spacing:.08em;
+    text-transform:uppercase;font-weight:700;text-align:left;padding:7px 8px;
+    border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  .roster-table th.c,.roster-table td.c{text-align:center}
+  .roster-table td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .roster-table tbody tr:last-child td{border-bottom:none}
+  .roster-table tbody tr:hover{background:#f2fafb}
+  .roster-table .mono{font-family:"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace}
+  .roster-table .do{color:#7a2456;font-weight:600}
+  .roster-table .stby{color:#9a6a00;font-weight:600}
+  .roster-table tfoot td{
+    padding:7px 8px;border-top:2px solid var(--line);background:var(--panel-2);
+    font-weight:700;
+  }
+  .roster-table tfoot .total-label{
+    text-align:right;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;
+  }
+  .roster-table tfoot .total-value{color:var(--gold-soft);font-size:13px}
+
+  /* ---------- misc ---------- */
+  footer{border-top:1px solid var(--line);padding:14px 22px;background:var(--panel)}
+  .footer-inner{max-width:1180px;margin:0 auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .footer-inner .grow{flex:1}
+  .footer-note{font-size:12px;color:var(--muted)}
+
+  #toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    background:var(--panel);border:1px solid var(--gold-soft);color:var(--ink);
+    padding:12px 20px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;
+    transition:opacity .25s,transform .25s;z-index:50;box-shadow:0 8px 24px rgba(31,41,55,.25);
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);color:var(--muted);background:var(--panel-2)}
+  .badge.pass{color:var(--good);border-color:rgba(46,125,79,.45);background:rgba(46,125,79,.08)}
+  .badge.fail{color:var(--danger);border-color:rgba(192,57,43,.45);background:rgba(192,57,43,.08)}
+  .badge.do{color:#7a2456;border-color:rgba(122,36,86,.45);background:rgba(122,36,86,.08)}
+  .badge.stby{color:#9a6a00;border-color:rgba(154,106,0,.45);background:rgba(154,106,0,.08)}
+  .duty-tag{
+    display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;letter-spacing:.04em;
+    border:1px solid var(--line);color:var(--muted);background:var(--panel-2);margin:0 4px 4px 0;
+  }
+  .duty-tag.do{color:#7a2456;border-color:rgba(122,36,86,.45);background:rgba(122,36,86,.08)}
+  .duty-tag.stby{color:#9a6a00;border-color:rgba(154,106,0,.45);background:rgba(154,106,0,.08)}
+  .duty-tag.flight{color:var(--sky);border-color:rgba(61,127,138,.45);background:rgba(61,127,138,.08)}
+
+  .empty{padding:36px 20px;text-align:center;color:var(--muted)}
+  .empty .big{font-size:34px;margin-bottom:8px;font-family:Arial,Helvetica,sans-serif;font-weight:700;color:var(--gold-soft)}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1024px){
+    header{padding:14px 16px 0}
+    main{padding:20px 16px 48px}
+    .panel{padding:16px}
+  }
+  @media (max-width:900px){
+    #parties{grid-template-columns:1fr}
+  }
+  @media (max-width:768px){
+    .grid-3{grid-template-columns:1fr 1fr}
+    .grid-2{grid-template-columns:1fr}
+    .logotype{font-size:22px}
+    nav button{padding:9px 12px 11px;font-size:13px}
+    .duty-card label{flex:1 1 120px}
+    .ocr-row-head,.ocr-row{grid-template-columns:1fr 1fr 1fr}
+    .ocr-row-head{display:none}
+    .ocr-row{padding:12px 0;border-top:1px dashed var(--line);position:relative}
+    .rec-top{flex-direction:column;align-items:flex-start}
+  }
+  @media (max-width:520px){
+    .grid-3{grid-template-columns:1fr}
+    .duty-card label{flex:1 1 140px}
+    .duty-date{flex:0 0 40px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-row">
+    <div class="brand-id">
+      <img class="brand-logo" src="Logo.png" alt="GBA">
+      <div>
+        <div class="logotype">GBA SWAP CHECK</div>
+        <div class="brand-sub">⭐Last updated 8/11/2026</div>
+      </div>
+    </div>
+    <div class="hint" id="hdr-hint"></div>
+  </div>
+  <nav>
+    <button data-view="import">Roster Import</button>
+    <button class="active" data-view="check">Swap Check</button>
+    <button data-view="rules">Rules</button>
+    <button data-view="records">Records</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ SWAP CHECK ============ -->
+  <section class="view active" id="view-check">
+    <div class="panel">
+      <div class="row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Crew Members &amp; Duty Days</span>
+        <span class="hint" id="req-summary"></span>
+      </div>
+
+      <div id="parties"></div>
+
+      <div class="row-actions">
+        <button class="btn btn-primary" id="run-check">Run Swap Check</button>
+        <button class="btn btn-ghost" id="reset-form">Clear</button>
+      </div>
+
+      <div id="verdict"></div>
+    </div>
+  </section>
+
+  <!-- ============ ROSTER IMPORT (PDF) ============ -->
+  <section class="view" id="view-import">
+    <div class="panel">
+      <div class="panel-title">Roster Import</div>
+
+      <div id="drop-zone" class="drop-zone">
+        <div class="dz-icon">⇪</div>
+        <div class="dz-main" id="dz-main">Drop a roster PDF here</div>
+        <div class="dz-sub">or</div>
+        <button class="btn btn-primary" id="pick-file">Choose File</button>
+        <div class="dz-hint" id="dz-hint">PDF · A text-based PDF (exported from Excel) gives the best results</div>
+        <input type="file" id="file-input" accept="application/pdf" hidden>
+      </div>
+
+      <div class="row-actions">
+        <button class="btn btn-ghost" id="ocr-clear">Clear</button>
+      </div>
+
+      <div id="ocr-progress" class="ocr-progress hidden">
+        <div class="bar"><div class="fill" id="ocr-bar"></div></div>
+        <div class="hint" id="ocr-status">Preparing…</div>
+      </div>
+
+      <div id="ocr-error" class="ocr-error hidden"></div>
+    </div>
+
+    <div class="panel hidden" id="ocr-result-panel">
+      <div class="row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Extracted Duty Days</span>
+        <span class="hint" id="ocr-count"></span>
+      </div>
+
+      <div class="row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Rows — edit as needed</span>
+        <span class="hint">Remove a row the PDF read incorrectly, or add a duty that is missing</span>
+      </div>
+
+      <div class="ocr-row-head">
+        <span>Date</span><span>Day</span><span>Duty</span><span>SD</span><span>Sector</span>
+        <span>Duty Start</span><span>Dep Time</span><span>Arr Time</span><span>Duty End</span>
+        <span>Duty Period</span><span>Block Hour</span><span></span>
+      </div>
+      <div id="ocr-rows"></div>
+
+      <div class="row-actions">
+        <button class="btn btn-ghost" id="ocr-add-flight">Add Flight Duty</button>
+        <button class="btn btn-primary" id="ocr-apply-a">Add to Swap Check (Crew A)</button>
+        <button class="btn btn-primary" id="ocr-apply-b">Add to Swap Check (Crew B)</button>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="roster-pdf-panel">
+      <div class="row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Roster Preview &amp; PDF</span>
+        <span class="hint" id="roster-pdf-count"></span>
+      </div>
+      <div class="grid-3" style="margin-bottom:14px">
+        <label class="field">Crew Name (shown on the PDF)
+          <input id="pdf-crew" placeholder="e.g. Chan Tai Man" autocomplete="off">
+        </label>
+      </div>
+
+      <div class="roster-scroll">
+        <table class="roster-table" id="roster-preview"></table>
+      </div>
+
+      <div class="row-actions">
+        <button class="btn btn-primary" id="pdf-export">Export Roster as PDF</button>
+        <button class="btn btn-ghost" id="pdf-csv">Export Roster as CSV</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RULES ============ -->
+  <section class="view" id="view-rules">
+    <div class="panel">
+      <div class="panel-title">Validation Rules</div>
+      <p class="hint" style="margin-bottom:16px">These rules are applied to every swap check. Toggle a rule off to skip it, or edit its threshold to match current policy.</p>
+      <div id="rules-list"></div>
+      <div class="row-actions">
+        <button class="btn btn-ghost" id="rules-reset">Reset Rules to Default</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RECORDS ============ -->
+  <section class="view" id="view-records">
+    <div class="panel">
+      <div class="panel-title">Saved Swap Records</div>
+      <div class="toolbar">
+        <select id="filter-result">
+          <option value="">All results</option>
+          <option value="pass">Approved</option>
+          <option value="fail">Rejected</option>
+        </select>
+        <input id="filter-text" type="search" placeholder="Search records" style="flex:1;min-width:160px">
+        <span class="spacer"></span>
+        <span class="hint" id="records-count"></span>
+        <button class="btn btn-ghost btn-sm" id="export-records">Export CSV</button>
+        <button class="btn btn-danger btn-sm" id="clear-records">Clear All</button>
+      </div>
+      <div id="records-list"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-note">GBA Swap Check — offline-first roster validation tool</div>
+    <span class="grow"></span>
+    <div class="footer-note" id="store-note"></div>
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+const KEY = "gbaswapcheck.v2";
+const RULES_KEY = "gbaswapcheck.rules.v2";
+
+/* Default thresholds, all editable in the Rules tab */
+const DEFAULT_RULES = [
+  /* --- 1. Number of Duty Days in a Swap Request --- */
+  { group:"1. Duty Days in a Swap Request", id:"maxConsecDays", on:true, label:"Maximum Consecutive Duty Days",
+    value:10, unit:"days", numeric:true,
+    text:"A Swap Request can be <b>10 consecutive duty days</b> (e.g. 2nd–11th) or <b>5 individual duty days</b> (e.g. 6th, 10th, 18th, 20th, 23rd). " +
+         "<br><br><b>Remarks:</b> If any individual duty swap is not approved, all other swaps will also be rejected." },
+  { group:"1. Duty Days in a Swap Request", id:"maxIndivDays", on:true, label:"Maximum Individual (Non-consecutive) Duty Days",
+    value:5, unit:"days", numeric:true,
+    text:"Maximum number of non-consecutive individual duty days permitted in a single Swap Request." },
+
+  /* --- 2. Swap Limitations --- */
+  { group:"2. Swap Limitations", id:"minBlockHours", on:true, label:"Minimum Block Hours for Swap-Out",
+    value:50, unit:"h", numeric:true,
+    text:"If the total block hours on roster stage or after swapping is <b>below 50 hours</b>, swapping-out block hours is not allowed, except:<br>" +
+         "• DO to DO swaps<br>• Duty swap with same block hours<br>• Swap-in duty with higher block hours" },
+  { group:"2. Swap Limitations", id:"allowBlockSame", on:true, label:"Allow Swap With Same Block Hours",
+    value:1, unit:"", numeric:false,
+    text:"Permit a duty swap where the swap-out and swap-in duty carry the <b>same block hours</b>." },
+  { group:"2. Swap Limitations", id:"allowBlockHigher", on:true, label:"Allow Swap-In With Higher Block Hours",
+    value:1, unit:"", numeric:false,
+    text:"Permit a swap-in duty that carries <b>higher block hours</b> than the duty swapped out." },
+  { group:"2. Swap Limitations", id:"allowDoToDo", on:true, label:"Allow DO to DO Swaps",
+    value:1, unit:"", numeric:false,
+    text:"Permit a <b>DO swapped for a DO</b> without the 50-hour block minimum applying." },
+
+  /* --- 3. DO and Standby Duty --- */
+  { group:"3. Day Off (DO) and Standby Duty", id:"doMinHours", on:true, label:"Minimum DO Length",
+    value:34, unit:"h", numeric:true,
+    text:"A single DO involved in swapping shall include <b>2 local nights</b> and be of at least <b>34 hours</b>. " +
+         "A local night is a period of 8 hours falling between 2200 and 0800 local time." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"doMinNights", on:true, label:"Local Nights Required in a DO",
+    value:2, unit:"nights", numeric:true,
+    text:"Number of local nights a single DO must contain." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"doConsecMinHours", on:true, label:"Additional Consecutive DO Minimum",
+    value:24, unit:"h", numeric:true,
+    text:"An additional consecutive day off that follows must be of at least <b>24 hours</b>." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"doEarliestStart", on:true, label:"Earliest Duty Start After DO",
+    value:"06:00", unit:"", numeric:false, time:true,
+    text:"A DO cannot be followed by duty earlier than <b>0600</b>." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"dutyEndBuffer", on:true, label:"Duty End Buffer After STA / ATA",
+    value:30, unit:"mins", numeric:true,
+    text:"Duty end time is <b>30 minutes after STA / ATA</b> or end of Standby duty period." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"latestEndBeforeDo", on:true, label:"Latest Duty End Before a DO",
+    value:"23:30", unit:"", numeric:false, time:true,
+    text:"To protect operations, any swap that results in a duty end time beyond <b>2330L before a DO</b> will not be approved." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"maxConsecDutyDays", on:true, label:"Maximum Consecutive Days on Duty",
+    value:6, unit:"days", numeric:true,
+    text:"Crewmember shall not be on duty more than <b>6 consecutive days</b>." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"sixthDayEnd", on:true, label:"Duty End Time on 6th Consecutive Duty Day",
+    value:"21:00", unit:"", numeric:false, time:true,
+    text:"Duty end time on the <b>6th duty day</b> is <b>2100L</b>." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"twelfthDayEnd", on:true, label:"Latest Duty End on 12th Day (after 2 consecutive DO)",
+    value:"18:30", unit:"", numeric:false, time:true,
+    text:"Following the previous <b>2 consecutive DO</b>, the latest duty end time on the 12th day is <b>1830L</b>, and it should be followed by DO on the 13th and 14th day." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"standbyNoDoAfter", on:true, label:"Standby Starting 1100L or Later Cannot Be Followed by DO",
+    value:"11:00", unit:"", numeric:false, time:true,
+    text:"<b>Standby duty that starts from / after 1100L cannot be followed by DO.</b>" },
+  { group:"3. Day Off (DO) and Standby Duty", id:"standby1100NextMinCheckin", on:true, label:"Min Check-in After Standby Starting 1100L",
+    value:"12:00", unit:"", numeric:false, time:true,
+    text:"The duty day after standby duty that starts at 1100L cannot be swapped for duty with check-in time earlier than <b>1200L</b>." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"standby1200NextMinCheckin", on:true, label:"Min Check-in After Standby Starting 1200L or Later",
+    value:"15:00", unit:"", numeric:false, time:true,
+    text:"The duty day after standby duty that starts from 1200L or onwards cannot be swapped for duty with check-in time earlier than <b>1500L</b>." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"standbyH10RestrictDays", on:true, label:"Restricted Days After Standby H10",
+    value:2, unit:"days", numeric:true,
+    text:"The two days (D2 and D3) following standby duty H10 on Day 1 (D1) can only be <b>Flight / Standby duties</b>, and cannot be DO, Training duties, SNY flights, GD, or Company assigned special duty after a swap." },
+  { group:"3. Day Off (DO) and Standby Duty", id:"prcDestinations", on:true, label:"PRC Destination Restrictions",
+    value:1, unit:"", numeric:false,
+    text:"The request for <b>PRC crew</b> swapping in DYG / CKG / ENH flight or standby duties may not be accommodated due to operational reasons. " +
+         "As a result, the swap quota will not be deducted. This limitation may extend to other new PRC destinations, subject to local authority requirement." },
+
+  /* --- 4. Rest Period --- */
+  { group:"4. Rest Period", id:"restFixed", on:true, label:"Minimum Rest Period (fixed)",
+    value:12, unit:"h", numeric:true,
+    text:"Rest period commences <b>30 minutes after actual time of arrival (ATA)</b>. Minimum rest required after duty should be <b>12 hours</b>…" },
+  { group:"4. Rest Period", id:"restMatchDuty", on:true, label:"Rest at Least as Long as Preceding Duty",
+    value:1, unit:"", numeric:false,
+    text:"Or as long as the preceding duty period, whichever is greater." },
+  { group:"4. Rest Period", id:"restBuffer", on:true, label:"Rest Commences After ATA Buffer",
+    value:30, unit:"mins", numeric:true,
+    text:"The rest period commences <b>30 minutes after actual time of arrival (ATA)</b>." },
+
+  /* --- 5. Duty Hour Limitations --- */
+  { group:"5. Duty Hour Limitations", id:"maxHours7", on:true, label:"Maximum Hours in 7 Consecutive Days",
+    value:60, unit:"h", numeric:true,
+    text:"Maximum duty hours for cabin crew shall not exceed <b>60 hours in any 7 consecutive days</b>." },
+  { group:"5. Duty Hour Limitations", id:"maxHours14", on:true, label:"Maximum Hours in 14 Consecutive Days",
+    value:105, unit:"h", numeric:true,
+    text:"Or exceed <b>105 hours in any consecutive 14 days</b>." },
+  { group:"5. Duty Hour Limitations", id:"maxHours28", on:true, label:"Maximum Hours in 28 Consecutive Days",
+    value:210, unit:"h", numeric:true,
+    text:"Or exceed <b>210 hours in any consecutive 28 days</b>." },
+
+  /* --- 6. Maximum Consecutive Days Off --- */
+  { group:"6. Maximum Consecutive Days Off (DO)", id:"maxConsecDo", on:true, label:"Maximum Consecutive Days Off",
+    value:4, unit:"days", numeric:true,
+    text:"The maximum number of consecutive DO allowed is <b>4</b>." }
+];
+
+let state = load() || { records:[] };
+let rules = loadRules();
+let crewSeq = 0;
+
+/* ============================================================
+   PERSISTENCE
+   ============================================================ */
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    if(!d || !Array.isArray(d.records)) return null;
+    return d;
+  }catch(e){ return null; }
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+function loadRules(){
+  try{
+    const raw = localStorage.getItem(RULES_KEY);
+    if(!raw) return DEFAULT_RULES.map(r => ({...r}));
+    const saved = JSON.parse(raw);
+    if(!Array.isArray(saved) || !saved.length) return DEFAULT_RULES.map(r => ({...r}));
+    return DEFAULT_RULES.map(d => {
+      const s = saved.find(x => x.id === d.id);
+      return s ? {...d, on: !!s.on, value: s.value} : {...d};
+    });
+  }catch(e){ return DEFAULT_RULES.map(r => ({...r})); }
+}
+function saveRules(){ try{ localStorage.setItem(RULES_KEY, JSON.stringify(rules)); }catch(e){} }
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const pad = n => String(n).padStart(2,"0");
+const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
+
+function fmtDate(iso){
+  if(!iso) return "—";
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d)) return iso;
+  return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+}
+function daysBetween(a, b){
+  const d1 = new Date(a + "T00:00:00"), d2 = new Date(b + "T00:00:00");
+  if(isNaN(d1) || isNaN(d2)) return null;
+  return Math.round((d2 - d1) / 86400000);
+}
+/* minutes since midnight for an "HH:MM" string */
+function hmToMin(hm){
+  if(!hm) return null;
+  const m = String(hm).match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return null;
+  const h = parseInt(m[1],10), mi = parseInt(m[2],10);
+  if(isNaN(h) || isNaN(mi)) return null;
+  return h*60 + mi;
+}
+function minToHm(mins){
+  if(mins === null || mins === undefined || isNaN(mins)) return "—";
+  const m = ((mins % 1440) + 1440) % 1440;
+  return pad(Math.floor(m/60)) + ":" + pad(m%60);
+}
+/* Duration in hours between two "HH:MM" times.
+   If the end is not after the start, the period is taken to end on the following day. */
+function durationHours(startHm, endHm){
+  const s = hmToMin(startHm), e = hmToMin(endHm);
+  if(s === null || e === null) return null;
+  let diff = e - s;
+  if(diff < 0) diff += 1440;
+  return round2(diff/60);
+}
+/* Duration of a day off. A DO starts on its own date and ends on a later date, so a
+   22:00 -> 08:00 window is the short overnight period while a 34h DO needs the end
+   time to roll forward to the next day (and, when still short, the day after).
+   minHours drives how many extra days the end time rolls forward. */
+function doDurationHours(startHm, endHm, minHours){
+  const s = hmToMin(startHm), e = hmToMin(endHm);
+  if(s === null || e === null) return null;
+  const target = (minHours === undefined || minHours === null) ? 34 : minHours;
+  /* try 0, 1 or 2 extra days of roll-forward and take the first that satisfies the minimum */
+  for(let extra = 0; extra <= 2; extra++){
+    const len = e - s + extra * 1440;
+    if(len >= target * 60) return round2(len/60);
+  }
+  /* none satisfied it — report the longest plausible span (2 days) */
+  return round2((e - s + 2*1440)/60);
+}
+/* Number of local nights (8h periods falling between 2200 and 0800 local time)
+   contained within a window. The window may roll forward past midnight. */
+function localNights(startHm, endHm, minHours){
+  const s = hmToMin(startHm), e = hmToMin(endHm);
+  if(s === null || e === null) return null;
+  const target = (minHours === undefined || minHours === null) ? 34 : minHours;
+  let len = e - s;
+  while(len < target * 60) len += 1440;
+  let count = 0;
+  /* a local night begins at 2200 and runs 8 hours to 0600 the next morning */
+  for(let m = s; m < s + len - 480; m += 30){
+    const hm = ((m % 1440) + 1440) % 1440;
+    if(hm === 22*60) count++;
+  }
+  return count;
+}
+
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+function ruleVal(id){ const r = rules.find(x => x.id === id); return r ? r.value : 0; }
+function ruleOn(id){ const r = rules.find(x => x.id === id); return r ? r.on : false; }
+function ruleNum(id, fallback){
+  const v = Number(ruleVal(id));
+  return isFinite(v) ? v : fallback;
+}
+function ruleTime(id, fallback){
+  const m = hmToMin(ruleVal(id));
+  return m === null ? fallback : m;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+document.querySelectorAll("nav button").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll("section.view").forEach(s => s.classList.remove("active"));
+    b.classList.add("active");
+    const v = document.getElementById("view-" + b.dataset.view);
+    if(v) v.classList.add("active");
+    if(b.dataset.view === "records") renderRecords();
+  });
+});
+
+/* ============================================================
+   CREW / DUTY DAY EDITORS
+   ============================================================ */
+/* Remove a duty day row that the user has not filled in.
+   A crew member starts with one empty duty day as a placeholder; once a real
+   duty day is added that placeholder must go, otherwise the crew member
+   appears to have an extra blank duty. */
+function removeEmptyDutyDays(crewEl){
+  const rows = [...crewEl.querySelectorAll(".duty-day")];
+  rows.forEach(row => {
+    const date = row.querySelector(".d-date").value;
+    const start = row.querySelector(".d-start").value;
+    const end = row.querySelector(".d-end").value;
+    const flight = row.querySelector(".d-flight").value.trim();
+    const sector = row.querySelector(".d-sector").value.trim();
+    const block = row.dataset.block || "";
+    const isEmpty = !date && !start && !end && !flight && !sector && !block;
+    if(isEmpty) row.remove();
+  });
+}
+
+/* The roster shows block hours as "1:40", but the swap-request field takes a
+   plain number of hours, so the value is converted on the way in. A value that
+   is already a number is passed through unchanged. */
+function blockHoursForInput(v){
+  const s = String(v || "").trim();
+  if(!s) return "";
+  const m = s.match(/^(\d{1,2}):(\d{2})$/);
+  if(m){
+    const mins = parseInt(m[1],10)*60 + parseInt(m[2],10);
+    return (mins/60).toFixed(2);
+  }
+  const n = parseFloat(s.replace(",", "."));
+  return isFinite(n) ? String(n) : "";
+}
+
+/* The date column shows the weekday and the day of the month, the way the
+   crew roster app lists them. */
+function updateDutyDateLabel(el){
+  const iso = el.querySelector(".d-date").value;
+  const dow = el.querySelector(".dow");
+  const dom = el.querySelector(".dom");
+  if(!iso){
+    dow.textContent = "DATE";
+    dom.textContent = "—";
+    return;
+  }
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d)){ dow.textContent = "DATE"; dom.textContent = "—"; return; }
+  dow.textContent = ["SUN","MON","TUE","WED","THU","FRI","SAT"][d.getDay()];
+  dom.textContent = String(d.getDate());
+}
+
+/* The duty type is worked out from the duty code: "DO" and "AL" are days off,
+   a standby code (H04, H14) is a standby, anything else is a flight. */
+/* A card can hold more than one sector: "HB 702 → HB 703". The kind is taken
+   from the first code that means something. */
+function dutyCodes(code){
+  return String(code || "").split(/→/).map(s => s.trim()).filter(Boolean);
+}
+
+function dutyTypeFromCode(code){
+  const kind = dutyKindFromCode(code);
+  if(kind === "off") return "DO";
+  if(kind === "standby") return "Standby";
+  return "Flight";
+}
+
+/* What kind of duty the code names:
+     flight   — a flight number (HB 702)
+     standby  — a standby code (H04, H14)
+     other    — another ground duty (A, GD)
+     off      — a day off or a leave (DO, AL) */
+function dutyKindFromCode(code){
+  const codes = dutyCodes(code);
+  if(!codes.length) return "flight";                 /* nothing typed yet */
+  for(const c of codes){
+    const s = c.toUpperCase();
+    if(s === "DO" || s === "AL") return "off";
+    if(/^H\d{2}$/.test(s)) return "standby";
+    if(/^(STB|STBY)/.test(s)) return "standby";
+    if(looksLikeFlightNo(s)) return "flight";
+  }
+  return "other";
+}
+
+/* Only a flight has a sector. A standby or another ground duty has no sector,
+   and a day off or leave has no duty times either — the roster app shows
+   just the duty code on those rows. The values are cleared as well, so the
+   rules never read a duty that still carries a sector or duty times. */
+function syncDutyFields(el){
+  const code = (el.querySelector(".d-flight").value || "").trim().toUpperCase();
+  const kind = dutyKindFromCode(code);
+  const hide = (sel, hidden) => {
+    const f = el.querySelector(sel).closest("label");
+    if(f) f.style.display = hidden ? "none" : "";
+  };
+  hide(".d-sector", kind !== "flight");
+  const isOff = kind === "off";
+  hide(".d-start", isOff);
+  hide(".d-end", isOff);
+  /* a day off or leave shows only the duty code — its card fits the content */
+  el.classList.toggle("compact", isOff);
+  /* more than one sector means the duty and sector carry a chain */
+  el.classList.toggle("multi", dutyCodes(code).length > 1);
+
+  if(kind !== "flight"){
+    el.querySelector(".d-sector").value = "";
+    el.dataset.block = "";
+  }
+  if(isOff){
+    el.querySelector(".d-start").value = "";
+    el.querySelector(".d-end").value = "";
+  }
+}
+
+/* The block hour of a duty is the flight time from departure to arrival.
+   When the roster printed no block hour, it is worked out from the duty times:
+   Duty Start is 65 min before departure and Duty End 30 min after arrival. */
+function deriveBlockHours(startHm, endHm){
+  const mins = minutesApart(startHm, endHm);
+  if(mins === null) return "";
+  const block = mins - 95;
+  if(block <= 0) return "";
+  return (block/60).toFixed(2);
+}
+
+/* How many duty days are ticked for the check, and the button that ticks or
+   clears them all. */
+function updateSelCount(crewEl){
+  if(!crewEl) return;
+  const boxes = [...crewEl.querySelectorAll(".d-check")];
+  const on = boxes.filter(b => b.checked).length;
+  const count = crewEl.querySelector(".sel-count");
+  if(count) count.textContent = boxes.length ? (on + " of " + boxes.length + " selected") : "";
+  const btn = crewEl.querySelector(".sel-all");
+  if(btn) btn.textContent = (boxes.length && on === boxes.length) ? "Clear" : "Select all";
+}
+
+/* A summary of the request: how many crew members, how many duty days, and
+   how many of those days are ticked for the check. */
+function rosterCounts(crews){
+  const used = (crews||[]).filter(c => c.name || (c.duties||[]).some(d => d.date));
+  const days = used.reduce((s,c) => s + (c.duties||[]).filter(d => d.date).length, 0);
+  const sel = used.reduce((s,c) => s + (c.duties||[]).filter(d => d.date && d.selected !== false).length, 0);
+  return { crews: used.length, days: days, sel: sel };
+}
+
+function addDutyDay(crewEl, data){
+  const d = data || {};
+  const el = document.createElement("div");
+  el.className = "duty-day";
+  el.dataset.dutyType = d.type || dutyTypeFromCode(d.flight);
+  el.dataset.selected = d.selected === false ? "0" : "1";
+  /* the block hour is kept on the row — it comes from the roster and the
+     block-hour rules need it, but it is no longer a column of its own */
+  el.dataset.block = blockHoursForInput(d.block);
+  el.innerHTML =
+    '<label class="duty-check" title="Include this duty day in the swap check">' +
+      '<input type="checkbox" class="d-check"'+(d.selected === false ? "" : " checked")+'>' +
+    '</label>' +
+    '<div class="duty-date" title="Change date">' +
+      '<span class="dow"></span>' +
+      '<span class="dom"></span>' +
+      '<input type="date" class="d-date" value="'+esc(d.date||"")+'">' +
+    '</div>' +
+    '<div class="duty-card">' +
+      '<label class="f-duty">Duty<input type="text" class="d-flight" placeholder="e.g. HB 702" value="'+esc(d.flight||"")+'"></label>' +
+      '<label class="f-sector">Sector<input type="text" class="d-sector" placeholder="e.g. HKG TPE" value="'+esc(d.sector||"")+'"></label>' +
+      '<label class="f-start"><span class="lbl-text">Duty Start</span><input type="time" class="d-start" value="'+esc(d.start||"")+'"></label>' +
+      '<label class="f-end"><span class="lbl-text">Duty End</span><input type="time" class="d-end" value="'+esc(d.end||"")+'"></label>' +
+      '<button class="row-del" title="Remove duty day" aria-label="Remove duty day">×</button>' +
+    '</div>';
+
+  el.querySelector(".row-del").addEventListener("click", () => el.remove());
+  /* the tick decides whether this duty day is checked */
+  el.querySelector(".d-check").addEventListener("change", ev => {
+    el.dataset.selected = ev.target.checked ? "1" : "0";
+    updateSelCount(el.closest(".party"));
+    updateSummary();
+  });
+  /* the duty code decides the type, and a day off hides its other fields */
+  el.querySelector(".d-flight").addEventListener("input", () => {
+    el.dataset.dutyType = dutyTypeFromCode(el.querySelector(".d-flight").value);
+    syncDutyFields(el);
+    syncDutyType(el);
+  });
+  /* a flight with no printed block hour gets one from its duty times */
+  ["start","end"].forEach(k => {
+    el.querySelector(".d-" + k).addEventListener("input", () => {
+      if(el.dataset.block) return;
+      if(el.dataset.dutyType !== "Flight") return;
+      el.dataset.block = deriveBlockHours(
+        el.querySelector(".d-start").value,
+        el.querySelector(".d-end").value
+      );
+    });
+  });
+  el.querySelector(".d-date").addEventListener("change", () => updateDutyDateLabel(el));
+  /* clicking the day number opens the date picker */
+  el.querySelector(".duty-date").addEventListener("click", () => {
+    const input = el.querySelector(".d-date");
+    try{ if(input.showPicker) input.showPicker(); else input.focus(); }
+    catch(e){ input.focus(); }
+  });
+  crewEl.querySelector(".duties").appendChild(el);
+  updateDutyDateLabel(el);
+  syncDutyFields(el);
+  syncDutyType(el);
+  return el;
+}
+
+/* The duty code stays visible for every type — it is the duty column the
+   roster app shows. The Block Hours column was removed, so only the time
+   labels follow the type. */
+function syncDutyType(el){
+  const type = el.dataset.dutyType || "Flight";
+  const isDO = type === "DO";
+  const isStby = type === "Standby";
+
+  /* relabel the time fields so the meaning is clear for each duty type */
+  const startText = el.querySelector(".d-start").closest("label").querySelector(".lbl-text");
+  const endText = el.querySelector(".d-end").closest("label").querySelector(".lbl-text");
+  if(isDO){
+    if(startText) startText.textContent = "DO Starts";
+    if(endText) endText.textContent = "DO Ends";
+  } else {
+    if(startText) startText.textContent = isStby ? "Standby Start" : "Duty Start";
+    if(endText) endText.textContent = isStby ? "Standby End" : "Duty End";
+  }
+}
+
+function addCrew(data){
+  const d = data || {};
+  crewSeq++;
+  const el = document.createElement("div");
+  el.className = "party";
+  el.innerHTML =
+    '<div class="party-head">' +
+      '<div class="who"><span class="tag">Crew Member</span><span class="crew-name-label">'+esc(d.name||("Crew Member "+crewSeq))+'</span></div>' +
+      '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+        '<input type="text" class="c-name" value="'+esc(d.name||"")+'" placeholder="Crew member name" style="background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:inherit;font-size:14px;padding:8px 10px;outline:none;width:190px">' +
+        '<button class="btn btn-ghost btn-sm c-add-day">+ Duty Day</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="party-body">' +
+      '<div class="hist-head">' +
+        '<span>Duty Days in This Request</span>' +
+        '<span style="display:flex;align-items:center;gap:8px">' +
+          '<span class="hint sel-count"></span>' +
+          '<button class="btn btn-ghost btn-mini sel-all" type="button">Select all</button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="duties"></div>' +
+    '</div>';
+
+  el.querySelector(".c-add-day").addEventListener("click", () => {
+    /* the empty starting row is a placeholder — replace it */
+    removeEmptyDutyDays(el);
+    addDutyDay(el);
+    updateSelCount(el);
+  });
+  el.querySelector(".c-name").addEventListener("input", ev => {
+    el.querySelector(".crew-name-label").textContent = ev.target.value || "Crew Member";
+  });
+  /* tick or clear every duty day of this crew member */
+  el.querySelector(".sel-all").addEventListener("click", () => {
+    const boxes = [...el.querySelectorAll(".d-check")];
+    const anyOff = boxes.some(b => !b.checked);
+    boxes.forEach(b => {
+      b.checked = anyOff;
+      b.closest(".duty-day").dataset.selected = anyOff ? "1" : "0";
+    });
+    updateSelCount(el);
+    updateSummary();
+  });
+
+  document.getElementById("parties").appendChild(el);
+  relabelCrewSlots();
+
+  (d.duties || []).forEach(x => addDutyDay(el, x));
+  if(!(d.duties || []).length) addDutyDay(el);
+  updateSelCount(el);
+
+  return el;
+}
+
+/* The crew slots are shown as columns. The first is Crew A and the second Crew B,
+   matching the Roster Import buttons that fill them. */
+function crewSlotLabel(i){
+  if(i === 0) return "Crew A";
+  if(i === 1) return "Crew B";
+  return "Crew Member " + (i + 1);
+}
+function relabelCrewSlots(){
+  [...document.querySelectorAll("#parties .party")].forEach((el, i) => {
+    const tag = el.querySelector(".who .tag");
+    if(tag) tag.textContent = crewSlotLabel(i);
+  });
+}
+
+function readCrew(){
+  return [...document.querySelectorAll("#parties .party")].map(el => {
+    const name = el.querySelector(".c-name").value.trim();
+    /* keep the header label in step with the name field */
+    const lbl = el.querySelector(".crew-name-label");
+    if(lbl && lbl.textContent !== name) lbl.textContent = name || "Unnamed crew member";
+    return {
+      name,
+      duties: [...el.querySelectorAll(".duty-day")].map(d => ({
+        date: d.querySelector(".d-date").value,
+        type: d.dataset.dutyType || "Flight",
+        start: d.querySelector(".d-start").value,
+        end: d.querySelector(".d-end").value,
+        block: d.dataset.block || "",
+        flight: d.querySelector(".d-flight").value.trim(),
+        sector: d.querySelector(".d-sector").value.trim(),
+        selected: d.dataset.selected !== "0"
+      })),
+      /* the preceding duty days section was removed — the rest and
+         hour-limit rules work on the duty days in the request alone */
+      history: []
+    };
+  });
+}
+
+/* ============================================================
+   RULE ENGINE
+   ============================================================ */
+function dayHours(d){
+  if(!d) return null;
+  if(d.type === "DO") return 0;
+  if(d.hours !== undefined && d.hours !== "" && d.hours !== null) return num(d.hours);
+  const h = durationHours(d.start, d.end);
+  return h === null ? null : h;
+}
+
+function validate(data){
+  const issues = [];
+  /* Only the ticked duty days are checked — the rest of the roster stays on
+     the form but is left out of the rules. */
+  const crews = (data.crews || []).map(c => Object.assign({}, c, {
+    duties: (c.duties||[]).filter(d => d.date && d.selected !== false)
+  })).filter(c => c.name || c.duties.length);
+
+  if(!crews.length){
+    issues.push({ ok:false, text:"At least one crew member is required." });
+    return { result:"fail", issues, fails:1, sections:[] };
+  }
+  if(crews.length < 2){
+    issues.push({ ok:false, text:"A swap requires at least two crew members (the requester and a swap partner)." });
+  }
+
+  /* ---- per-crew rules ---- */
+  crews.forEach((crew, ci) => {
+    const who = crew.name || ("Crew member #"+(ci+1));
+    const duties = (crew.duties||[]).filter(d => d.date);
+    const history = (crew.history||[]).filter(h => h.date);
+
+    /* Rule 1 — number of duty days, consecutive or individual */
+    if(duties.length){
+      const dates = duties.map(d => d.date).sort();
+      const uniq = [...new Set(dates)];
+      let maxRun = 1, run = 1;
+      for(let i = 1; i < uniq.length; i++){
+        const gap = daysBetween(uniq[i-1], uniq[i]);
+        if(gap === 1){ run++; maxRun = Math.max(maxRun, run); }
+        else { run = 1; }
+      }
+      const isConsecutive = maxRun === uniq.length;
+      if(isConsecutive){
+        const maxC = ruleOn("maxConsecDays") ? ruleNum("maxConsecDays", 10) : null;
+        if(maxC !== null && uniq.length > maxC){
+          issues.push({ ok:false, who, text:who+": "+uniq.length+" consecutive duty days exceeds the maximum of "+maxC+"." });
+        }
+      } else {
+        const maxI = ruleOn("maxIndivDays") ? ruleNum("maxIndivDays", 5) : null;
+        if(maxI !== null && uniq.length > maxI){
+          issues.push({ ok:false, who, text:who+": "+uniq.length+" individual (non-consecutive) duty days exceeds the maximum of "+maxI+"." });
+        }
+      }
+    }
+
+    /* Rule 2 — block hours are assessed across the swap (see cross-crew section) */
+
+    /* Rule 3 — DO rules */
+    const doDays = duties.filter(d => d.type === "DO");
+    if(doDays.length){
+      const minDoH = ruleOn("doMinHours") ? ruleNum("doMinHours", 34) : 0;
+      const minNights = ruleOn("doMinNights") ? ruleNum("doMinNights", 2) : 0;
+      doDays.forEach(d => {
+        const startHm = d.start || "22:00";
+        const endHm = d.end || "";
+        const h = doDurationHours(startHm, endHm, minDoH);
+        const nights = localNights(startHm, endHm, minDoH);
+        if(h !== null && h < minDoH){
+          issues.push({ ok:false, who, text:who+": DO on "+fmtDate(d.date)+" is "+h+"h, below the "+minDoH+"h minimum (must include "+minNights+" local nights)." });
+        } else if(nights !== null && nights < minNights){
+          issues.push({ ok:false, who, text:who+": DO on "+fmtDate(d.date)+" contains "+nights+" local night(s), fewer than the required "+minNights+"." });
+        }
+      });
+    }
+
+    /* Rule 3 — duty end buffer before a DO (latest end before DO) */
+    if(ruleOn("latestEndBeforeDo")){
+      const latest = ruleTime("latestEndBeforeDo", 1410); /* 23:30 */
+      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      for(let i = 0; i < sorted.length - 1; i++){
+        const cur = sorted[i], nxt = sorted[i+1];
+        if(cur.type === "DO" || nxt.type !== "DO") continue;
+        const gap = daysBetween(cur.date, nxt.date);
+        if(gap !== 1) continue;
+        const endMin = hmToMin(cur.end);
+        if(endMin === null) continue;
+        const eff = endMin; /* duty end already includes the STA/ATA buffer when entered */
+        if(eff > latest){
+          issues.push({ ok:false, who, text:who+": duty ending "+minToHm(eff)+"L on "+fmtDate(cur.date)+" is beyond the "+minToHm(latest)+"L limit before a DO on "+fmtDate(nxt.date)+"." });
+        }
+      }
+    }
+
+    /* Rule 3 — DO cannot be followed by duty earlier than 0600 */
+    if(ruleOn("doEarliestStart")){
+      const earliest = ruleTime("doEarliestStart", 360); /* 06:00 */
+      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      for(let i = 0; i < sorted.length - 1; i++){
+        const cur = sorted[i], nxt = sorted[i+1];
+        if(cur.type !== "DO" || nxt.type === "DO") continue;
+        const gap = daysBetween(cur.date, nxt.date);
+        if(gap !== 1) continue;
+        const s = hmToMin(nxt.start);
+        if(s === null) continue;
+        if(s < earliest){
+          issues.push({ ok:false, who, text:who+": duty on "+fmtDate(nxt.date)+" starts at "+minToHm(s)+"L, earlier than the "+minToHm(earliest)+"L minimum after a DO." });
+        }
+      }
+    }
+
+    /* Rule 3 — max consecutive days on duty */
+    if(ruleOn("maxConsecDutyDays")){
+      const maxD = ruleNum("maxConsecDutyDays", 6);
+      const allDays = duties.concat(history).filter(d => d.date && d.type !== "DO");
+      const dates = [...new Set(allDays.map(d => d.date))].sort();
+      let run = 0, best = 0;
+      for(let i = 0; i < dates.length; i++){
+        if(i > 0 && daysBetween(dates[i-1], dates[i]) === 1) run++;
+        else run = 1;
+        best = Math.max(best, run);
+      }
+      if(best > maxD){
+        issues.push({ ok:false, who, text:who+": "+best+" consecutive days on duty exceeds the maximum of "+maxD+"." });
+      }
+    }
+
+    /* Rule 3 — 6th consecutive duty day ends by 2100L */
+    if(ruleOn("sixthDayEnd")){
+      const limit = ruleTime("sixthDayEnd", 1260); /* 21:00 */
+      const allDays = duties.concat(history).filter(d => d.date && d.type !== "DO");
+      const dates = [...new Set(allDays.map(d => d.date))].sort();
+      let run = 0;
+      for(let i = 0; i < dates.length; i++){
+        if(i > 0 && daysBetween(dates[i-1], dates[i]) === 1) run++;
+        else run = 1;
+        if(run === 6){
+          const d = allDays.find(x => x.date === dates[i]);
+          const e = hmToMin(d && d.end);
+          if(e !== null && e > limit){
+            issues.push({ ok:false, who, text:who+": duty on "+fmtDate(dates[i])+" (6th consecutive duty day) ends at "+minToHm(e)+"L, later than the "+minToHm(limit)+"L limit." });
+          }
+        }
+      }
+    }
+
+    /* Rule 3 — standby starting 1100L+ cannot be followed by DO */
+    if(ruleOn("standbyNoDoAfter")){
+      const from = ruleTime("standbyNoDoAfter", 660); /* 11:00 */
+      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      for(let i = 0; i < sorted.length - 1; i++){
+        const cur = sorted[i], nxt = sorted[i+1];
+        if(cur.type !== "Standby" || nxt.type !== "DO") continue;
+        if(daysBetween(cur.date, nxt.date) !== 1) continue;
+        const s = hmToMin(cur.start);
+        if(s !== null && s >= from){
+          issues.push({ ok:false, who, text:who+": standby duty on "+fmtDate(cur.date)+" starts at "+minToHm(s)+"L and cannot be followed by a DO ("+minToHm(from)+"L or later)." });
+        }
+      }
+    }
+
+    /* Rule 3 — duty after standby check-in restrictions
+       Standby starting at 1100L  -> next duty check-in no earlier than 1200L
+       Standby starting 1200L or later -> next duty check-in no earlier than 1500L */
+    if(ruleOn("standby1100NextMinCheckin") && ruleOn("standby1200NextMinCheckin")){
+      const min1100 = ruleTime("standby1100NextMinCheckin", 720); /* 12:00 */
+      const min1200 = ruleTime("standby1200NextMinCheckin", 900); /* 15:00 */
+      const from1200 = 12*60; /* 1200L */
+      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      for(let i = 0; i < sorted.length - 1; i++){
+        const cur = sorted[i], nxt = sorted[i+1];
+        if(cur.type !== "Standby" || nxt.type === "DO") continue;
+        if(daysBetween(cur.date, nxt.date) !== 1) continue;
+        const s = hmToMin(cur.start);
+        const ns = hmToMin(nxt.start);
+        if(s === null || ns === null) continue;
+        const limit = (s >= from1200) ? min1200 : min1100;
+        if(ns < limit){
+          issues.push({ ok:false, who, text:who+": duty on "+fmtDate(nxt.date)+" starts at "+minToHm(ns)+"L but standby on "+fmtDate(cur.date)+" starting "+minToHm(s)+"L requires a check-in no earlier than "+minToHm(limit)+"L." });
+        }
+      }
+    }
+
+    /* Rule 3 — D2/D3 after standby H10 restricted */
+    if(ruleOn("standbyH10RestrictDays")){
+      const span = ruleNum("standbyH10RestrictDays", 2);
+      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      for(let i = 0; i < sorted.length; i++){
+        const sb = sorted[i];
+        if(sb.type !== "Standby") continue;
+        const h10 = durationHours(sb.start, sb.end);
+        if(h10 === null || h10 < 10) continue;
+        for(let k = 1; k <= span; k++){
+          const nd = sorted.find(d => daysBetween(sb.date, d.date) === k);
+          if(!nd) continue;
+          if(nd.type === "DO"){
+            issues.push({ ok:false, who, text:who+": "+fmtDate(nd.date)+" (D"+(k+1)+" after standby H10) cannot be a DO after a swap." });
+          }
+        }
+      }
+    }
+
+    /* Rule 6 — max consecutive DO */
+    if(ruleOn("maxConsecDo")){
+      const maxDo = ruleNum("maxConsecDo", 4);
+      const doDates = [...new Set(duties.filter(d => d.type === "DO").map(d => d.date))].sort();
+      let run = 0, best = 0;
+      for(let i = 0; i < doDates.length; i++){
+        if(i > 0 && daysBetween(doDates[i-1], doDates[i]) === 1) run++;
+        else run = 1;
+        best = Math.max(best, run);
+      }
+      if(best > maxDo){
+        issues.push({ ok:false, who, text:who+": "+best+" consecutive days off exceeds the maximum of "+maxDo+"." });
+      }
+    }
+
+    /* Rule 4 — rest period */
+    if(ruleOn("restFixed") || ruleOn("restMatchDuty")){
+      const restBuf = ruleOn("restBuffer") ? ruleNum("restBuffer", 30) : 0;
+      const fixed = ruleOn("restFixed") ? ruleNum("restFixed", 12) : 0;
+      const matchDuty = ruleOn("restMatchDuty");
+      const all = duties.concat(history).filter(d => d.date && d.type !== "DO")
+        .sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      for(let i = 0; i < all.length - 1; i++){
+        const cur = all[i], nxt = all[i+1];
+        const gap = daysBetween(cur.date, nxt.date);
+        if(gap === null || gap < 1) continue;
+        const endMin = hmToMin(cur.end);
+        const nextMin = hmToMin(nxt.start);
+        if(endMin === null || nextMin === null) continue;
+        /* rest from duty end (+buffer) to next duty start, spanning days */
+        let restMin = nextMin - endMin + (gap * 1440);
+        restMin -= restBuf;
+        const restH = round2(restMin/60);
+        const dutyH = durationHours(cur.start, cur.end) || 0;
+        const required = matchDuty ? Math.max(fixed, dutyH) : fixed;
+        if(restH < required){
+          issues.push({ ok:false, who, text:who+": rest of "+restH+"h before "+fmtDate(nxt.date)+" is below the required "+required+"h (preceding duty "+dutyH+"h)." });
+        }
+      }
+    }
+
+    /* Rule 5 — duty hour limitations over rolling windows */
+    if(ruleOn("maxHours7") || ruleOn("maxHours14") || ruleOn("maxHours28")){
+      const windows = [];
+      if(ruleOn("maxHours7"))  windows.push({ days:7,  max:ruleNum("maxHours7", 60),  label:"7 consecutive days" });
+      if(ruleOn("maxHours14")) windows.push({ days:14, max:ruleNum("maxHours14", 105), label:"14 consecutive days" });
+      if(ruleOn("maxHours28")) windows.push({ days:28, max:ruleNum("maxHours28", 210), label:"28 consecutive days" });
+
+      const all = duties.concat(history).filter(d => d.date && d.type !== "DO");
+      windows.forEach(w => {
+        /* sum hours for each contiguous window ending on each duty date */
+        all.forEach(d => {
+          let sum = 0;
+          const win = [];
+          for(let i = all.length - 1; i >= 0; i--){
+            const gap = daysBetween(all[i].date, d.date);
+            if(gap === null || gap < 0 || gap >= w.days) break;
+            const h = dayHours(all[i]);
+            sum += (h === null ? 0 : h);
+            win.push(all[i]);
+          }
+          if(round2(sum) > w.max){
+            issues.push({ ok:false, who, text:who+": "+round2(sum)+"h in "+w.days+" days ending "+fmtDate(d.date)+" exceeds the "+w.max+"h limit for "+w.label+"." });
+            return;
+          }
+        });
+      });
+    }
+  });
+
+  /* ---- cross-crew rules (block hours direction, PRC destinations) ---- */
+  if(crews.length >= 2 && ruleOn("minBlockHours")){
+    const minBlock = ruleNum("minBlockHours", 50);
+    const label = c => c.name || ("Crew member");
+
+    /* total block hours for each crew member's duty days in this request */
+    const totalOf = c => (c.duties||[]).reduce((s,d) => s + (d.block === "" || d.block == null ? 0 : num(d.block)), 0);
+    const blocks = crews.map(totalOf);
+
+    /* every crew member involved in the swap */
+    for(let i = 0; i < crews.length; i++){
+      const outH = blocks[i];
+      const outName = label(crews[i]);
+
+      /* a DO-to-DO swap carries no block hours */
+      const allDo = crews.every(c => (c.duties||[]).length > 0 && c.duties.every(d => d.type === "DO"));
+
+      /* the block hours this crew member would swap IN */
+      const swapInH = crews.reduce((s, c, j) => j === i ? s : s + blocks[j], 0);
+
+      if(outH <= 0) continue; /* nothing to swap out */
+      if(outH >= minBlock) continue; /* at or above the minimum — always allowed */
+
+      /* Below the minimum: check the exceptions */
+      const doToDo = allDo && ruleOn("allowDoToDo");
+      const sameBlock = ruleOn("allowBlockSame") && blocks.every(b => b === outH);
+      const higher = ruleOn("allowBlockHigher") && swapInH > outH;
+
+      if(doToDo) continue;
+      if(sameBlock) continue;
+      if(higher) continue;
+
+      issues.push({
+        ok:false,
+        text:"Block hours: "+outName+" would swap out "+round2(outH)+"h, below the "+minBlock+"h minimum, and swaps in "+round2(swapInH)+
+             "h. Swapping-out block hours is not allowed unless it is a DO to DO swap, a duty swap with the same block hours, or a swap-in duty with higher block hours."
+      });
+    }
+  }
+
+  /* Rule 3 — PRC destination restriction */
+  if(ruleOn("prcDestinations")){
+    const PRC = ["DYG","CKG","ENH"];
+    crews.forEach((crew, ci) => {
+      const who = crew.name || ("Crew member #"+(ci+1));
+      (crew.duties||[]).forEach(d => {
+        if(d.type === "DO") return;
+        const fl = (d.flight||"").toUpperCase();
+        if(PRC.some(p => fl.indexOf(p) !== -1)){
+          issues.push({ ok:false, who, text:who+": "+fmtDate(d.date)+" "+fl+" is a PRC destination (DYG/CKG/ENH) — swapping in PRC flight/standby duties may not be accommodated." });
+        }
+      });
+    });
+  }
+
+  const fails = issues.filter(i => !i.ok).length;
+
+  /* group issues by rule for the verdict panel */
+  const sections = [];
+  const pushSec = (title, arr) => { if(arr.length) sections.push({ title, items:arr }); };
+  pushSec("Request", issues.filter(i => !i.who));
+  pushSec("Per Crew Member", issues.filter(i => i.who));
+
+  return { result: fails === 0 ? "pass" : "fail", issues, fails, sections };
+}
+
+/* ============================================================
+   RUN CHECK
+   ============================================================ */
+/* Read a field that may no longer be on the page — the request details
+   panel was removed, so these come back empty. */
+function fieldValue(id){
+  const el = document.getElementById(id);
+  return el ? String(el.value || "").trim() : "";
+}
+
+document.getElementById("run-check").addEventListener("click", () => {
+  const crews = readCrew();
+  const data = {
+    crewName: fieldValue("f-crew"),
+    position: fieldValue("f-position"),
+    base: fieldValue("f-base").toUpperCase(),
+    reason: fieldValue("f-reason"),
+    crews
+  };
+
+  const v = validate(data);
+  renderVerdict(v, data);
+
+  /* The requester is the first crew member listed. The requester name field
+     is optional, so fall back to that crew member's own name. */
+  const requester = data.crewName || (crews[0] && crews[0].name) || "";
+
+  state.records.unshift({
+    id: uid(),
+    at: new Date().toISOString(),
+    requester,
+    position: data.position,
+    base: data.base,
+    reason: data.reason,
+    crews: data.crews,
+    result: v.result,
+    fails: v.fails,
+    issues: v.issues.map(i => i.text)
+  });
+  state.records = state.records.slice(0, 200);
+  save();
+  renderRecords();
+  toast(v.result === "pass" ? "Swap request approved" : v.fails + " issue(s) found");
+});
+
+function renderVerdict(v, data){
+  const el = document.getElementById("verdict");
+  const label = v.result === "pass" ? "SWAP APPROVED" : "SWAP REJECTED";
+  const cls = v.result === "pass" ? "pass" : "fail";
+  /* only the crew slots that are actually in use */
+  const counts = rosterCounts(data.crews);
+  const crewCount = counts.crews;
+  const dayCount = counts.days;
+  const selNote = counts.sel < counts.days ? ", " + counts.sel + " checked" : "";
+
+  let html = '<div class="verdict '+cls+'">' +
+    '<div class="verdict-title">'+(v.result==="pass"?"✓":"✕")+" "+label+'</div>' +
+    '<div class="hint" style="margin-top:4px">'+
+      esc(crewCount+" crew member(s), "+dayCount+" duty day(s)"+selNote)+
+      (v.result === "pass" ? " — all checks passed." : " — "+v.fails+" check(s) failed.")+
+    '</div>';
+
+  if(v.sections && v.sections.length){
+    v.sections.forEach(sec => {
+      html += '<div class="sec">'+esc(sec.title)+'</div><ul>';
+      sec.items.forEach(i => {
+        html += '<li class="'+(i.ok?"pass":"fail")+'">'+(i.ok?"✓":"✕")+" "+esc(i.text)+"</li>";
+      });
+      html += "</ul>";
+    });
+  }
+  html += "</div>";
+  el.innerHTML = html;
+}
+
+document.getElementById("reset-form").addEventListener("click", () => {
+  ["f-crew","f-position","f-base","f-reason"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = "";
+  });
+  document.getElementById("parties").innerHTML = "";
+  crewSeq = 0;
+  addCrew();
+  addCrew();
+  document.getElementById("verdict").innerHTML = "";
+  updateSummary();
+  toast("Form cleared");
+});
+
+function updateSummary(){
+  const counts = rosterCounts(readCrew());
+  document.getElementById("req-summary").textContent =
+    counts.crews + " crew member(s) · " + counts.days + " duty day(s)" +
+    (counts.sel < counts.days ? " · " + counts.sel + " selected" : "");
+}
+
+/* ============================================================
+   RULES VIEW
+   ============================================================ */
+function renderRules(){
+  const el = document.getElementById("rules-list");
+  const groups = [];
+  rules.forEach(r => {
+    let g = groups.find(x => x.title === r.group);
+    if(!g){ g = { title:r.group, items:[] }; groups.push(g); }
+    g.items.push(r);
+  });
+
+  el.innerHTML = groups.map(g =>
+    '<div class="rule-group"><h3>'+esc(g.title)+'</h3>' +
+    g.items.map(r => {
+      const editable = (r.numeric || r.time);
+      return '<div class="rule-card'+(r.on?"":" off")+'" data-rule="'+r.id+'">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">' +
+          '<h4>'+esc(r.label)+'</h4>' +
+          '<label class="rule-toggle"><input type="checkbox" class="r-on"'+(r.on?" checked":"")+'> '+(r.on?"Enabled":"Disabled")+'</label>' +
+        '</div>' +
+        '<div class="rule-text">'+r.text+'</div>' +
+        (editable
+          ? '<div class="rule-line"><span class="lbl">Threshold</span><span class="val">' +
+              '<input type="'+(r.time?"time":"number")+'"'+(r.numeric && !r.time?' step="0.5" min="0"':'')+' class="r-val" value="'+esc(r.value)+'"> ' +
+              (r.unit ? esc(r.unit) : "") +
+            '</span></div>'
+          : '<div class="rule-line"><span class="lbl">Setting</span><span class="val">'+(r.on?"Applied":"Skipped")+'</span></div>') +
+      '</div>';
+    }).join("") +
+    '</div>'
+  ).join("");
+
+  el.querySelectorAll(".rule-card").forEach(card => {
+    const id = card.dataset.rule;
+    const r = rules.find(x => x.id === id);
+    const onEl = card.querySelector(".r-on");
+    const valEl = card.querySelector(".r-val");
+
+    onEl.addEventListener("change", () => {
+      r.on = onEl.checked;
+      card.classList.toggle("off", !r.on);
+      onEl.nextSibling.textContent = r.on ? " Enabled" : " Disabled";
+      saveRules();
+      updateHint();
+    });
+    if(valEl){
+      valEl.addEventListener("change", () => {
+        r.value = valEl.type === "time" ? valEl.value : Number(valEl.value);
+        saveRules();
+        updateHint();
+        toast("Rule updated");
+      });
+    }
+  });
+}
+
+function updateHint(){
+  document.getElementById("hdr-hint").textContent = rules.filter(r=>r.on).length + " rules active";
+}
+
+document.getElementById("rules-reset").addEventListener("click", () => {
+  rules = DEFAULT_RULES.map(r => ({...r}));
+  saveRules();
+  renderRules();
+  updateHint();
+  toast("Rules reset to default");
+});
+
+/* ============================================================
+   RECORDS VIEW
+   ============================================================ */
+function renderRecords(){
+  const list = document.getElementById("records-list");
+  const resFilter = document.getElementById("filter-result").value;
+  const textFilter = document.getElementById("filter-text").value.trim().toLowerCase();
+
+  const rows = state.records.filter(r => {
+    if(resFilter && r.result !== resFilter) return false;
+    if(textFilter){
+      const hay = [r.requester, r.reason, r.position, r.base].concat(
+        (r.crews||[]).map(c => c.name)
+      ).join(" ").toLowerCase();
+      if(hay.indexOf(textFilter) === -1) return false;
+    }
+    return true;
+  });
+
+  document.getElementById("store-note").textContent = state.records.length + " record(s) stored";
+  document.getElementById("records-count").textContent =
+    rows.length === state.records.length
+      ? state.records.length + " record(s)"
+      : rows.length + " of " + state.records.length + " record(s)";
+
+  if(!rows.length){
+    list.innerHTML = '<div class="empty"><div class="big">⌁</div>' +
+      (state.records.length ? "No swap records match this filter." : "No swap records saved yet.") + '</div>';
+    return;
+  }
+
+  list.innerHTML = rows.map(r => {
+    const badge = r.result === "pass"
+      ? '<span class="badge pass">Approved</span>'
+      : '<span class="badge fail">Rejected</span>';
+
+    /* when the check was run */
+    const when = r.at ? new Date(r.at) : null;
+    const whenText = (when && !isNaN(when))
+      ? when.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" }) + ", " +
+        when.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" })
+      : "";
+
+    const crews = r.crews || [];
+    const dayCount = crews.reduce((s,c) => s + (c.duties||[]).filter(d => d.date).length, 0);
+
+    /* the findings, three at most */
+    const issues = r.issues || [];
+    const shown = issues.slice(0, 3);
+    const issueHtml = shown.length
+      ? '<ul class="rec-issues">' + shown.map(i => '<li>'+esc(i)+'</li>').join("") +
+        (issues.length > shown.length
+          ? '<li class="more">+' + (issues.length - shown.length) + ' more</li>' : '') +
+        '</ul>'
+      : '';
+
+    /* the duty days of each crew member, six at most */
+    const crewHtml = crews.map(c => {
+      const days = (c.duties||[]).filter(d => d.date);
+      const tags = days.slice(0, 6).map(d =>
+        '<span class="duty-tag '+(d.type==="DO"?"do":d.type==="Standby"?"stby":"flight")+'">'+
+          esc(d.type)+(d.flight?" "+esc(d.flight):"")+(d.sector?" "+esc(d.sector):"")+
+        '</span>'
+      ).join("");
+      const more = days.length > 6
+        ? '<span class="duty-tag">+' + (days.length - 6) + ' more</span>' : '';
+      return '<div class="rec-crew">' +
+          '<span class="rec-crew-name">'+esc(c.name||"—")+'</span>' +
+          '<span class="rec-crew-days">'+tags+more+'</span>' +
+        '</div>';
+    }).join("");
+
+    return '<div class="rec">' +
+      '<div class="rec-top">' +
+        '<div class="rec-who">' +
+          '<span class="rec-name">'+esc(r.requester||"—")+'</span>' + badge +
+        '</div>' +
+        '<div class="rec-meta">' +
+          '<span>'+crews.length+' crew · '+dayCount+' duty day(s)</span>' +
+          '<span class="rec-when">'+esc(whenText)+'</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="rec-body">' +
+        issueHtml + crewHtml +
+      '</div>' +
+      '<div class="rec-actions">' +
+        '<button class="btn btn-ghost btn-mini" data-reload="'+esc(r.id)+'">Load into form</button>' +
+        '<button class="btn btn-danger btn-mini" data-del="'+esc(r.id)+'">Delete</button>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+
+  list.querySelectorAll("[data-del]").forEach(b => {
+    b.addEventListener("click", () => {
+      state.records = state.records.filter(x => x.id !== b.dataset.del);
+      save();
+      renderRecords();
+      toast("Record deleted");
+    });
+  });
+  list.querySelectorAll("[data-reload]").forEach(b => {
+    b.addEventListener("click", () => {
+      const r = state.records.find(x => x.id === b.dataset.reload);
+      if(!r) return;
+      [["f-crew", r.requester], ["f-position", r.position], ["f-base", r.base], ["f-reason", r.reason]]
+        .forEach(([id, value]) => {
+          const el = document.getElementById(id);
+          if(el) el.value = value || "";
+        });
+      document.getElementById("parties").innerHTML = "";
+      crewSeq = 0;
+      (r.crews||[]).forEach(c => addCrew(c));
+      if(!(r.crews||[]).length) addCrew();
+      document.getElementById("verdict").innerHTML = "";
+      updateSummary();
+      document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll("section.view").forEach(s => s.classList.remove("active"));
+      document.querySelector('nav button[data-view="check"]').classList.add("active");
+      document.getElementById("view-check").classList.add("active");
+      toast("Record loaded into form");
+    });
+  });
+}
+
+document.getElementById("filter-result").addEventListener("change", renderRecords);
+document.getElementById("filter-text").addEventListener("input", renderRecords);
+
+document.getElementById("clear-records").addEventListener("click", () => {
+  if(!state.records.length){ toast("No records to clear"); return; }
+  if(!confirm("Delete all "+state.records.length+" swap record(s)? This cannot be undone.")) return;
+  state.records = [];
+  save();
+  renderRecords();
+  toast("All records cleared");
+});
+
+document.getElementById("export-records").addEventListener("click", () => {
+  const q = v => '"'+String(v == null ? "" : v).replace(/"/g,'""')+'"';
+  const head = ["Timestamp","Requester","Position","Base","Reason","Crew","Duty Days","Result","Issues"];
+  const lines = state.records.map(r => {
+    const crewNames = (r.crews||[]).map(c => c.name).join(" / ");
+    const days = (r.crews||[]).map(c => (c.duties||[]).filter(d => d.date).map(d =>
+      [d.date,d.type,d.start,d.end,d.block,d.flight,d.sector].join("/")
+    ).join("; ")).join(" | ");
+    return [r.at, r.requester, r.position, r.base, r.reason, crewNames, days, r.result, (r.issues||[]).join(" | ")];
+  });
+  const csv = [head].concat(lines).map(r => r.map(q).join(",")).join("\r\n");
+  const blob = new Blob(["\ufeff"+csv], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "gba-swap-check-"+today()+".csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  toast("CSV exported");
+});
+
+/* ============================================================
+   ROSTER IMPORT — PDF TABLE PARSER
+   ============================================================ */
+const JSPDF_CDN = "https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js";
+const PDFJS_CDN = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
+const PDFJS_WORKER_CDN = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+
+/* The roster grid, matching the GBA roster layout:
+     A Date        B Day       C Duty        D SD       E Sector
+     F Duty Start  G Dep Time  H Arr Time    I Duty End J Duty Period
+     K Block Hour
+   Each column records how wide it is and how its value is written.
+   "pdfTitle" is the heading used in the PDF roster format, so an exported
+   roster can be read back with the same headings it was uploaded with. */
+const ROSTER_COLUMNS = [
+  { key:"date",      title:"Date",        pdfTitle:"DATE OF DUTY", width:20, align:"left"  },
+  { key:"day",       title:"Day",         pdfTitle:"Day",          width:9,  align:"center" },
+  { key:"duty",      title:"Duty",        pdfTitle:"Flight No",    width:22, align:"left"  },
+  { key:"sector",    title:"Sector",      pdfTitle:"FROM + TO",    width:22, align:"left"  },
+  { key:"dutyStart", title:"Duty Start",  pdfTitle:"Duty Start",   width:18, align:"center" },
+  { key:"depTime",   title:"Dep Time",    pdfTitle:"STD",          width:18, align:"center" },
+  { key:"arrTime",   title:"Arr Time",    pdfTitle:"STA",          width:18, align:"center" },
+  { key:"dutyEnd",   title:"Duty End",    pdfTitle:"Duty End",     width:18, align:"center" },
+  { key:"dutyPeriod",title:"Duty Period", pdfTitle:"Duty Period",  width:20, align:"center" },
+  { key:"blockHour", title:"Block Hour",  pdfTitle:"BLOCK",        width:18, align:"center" }
+];
+
+let ocrRows = [];          /* parsed duty-day rows */
+
+/* ---- load jsPDF on demand ---- */
+let jspdfPromise = null;
+function loadJsPdf(){
+  if(window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+  if(jspdfPromise) return jspdfPromise;
+  jspdfPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = JSPDF_CDN;
+    s.async = true;
+    s.onload = () => (window.jspdf && window.jspdf.jsPDF)
+      ? resolve(window.jspdf.jsPDF)
+      : reject(new Error("PDF engine failed to initialise"));
+    s.onerror = () => reject(new Error("Could not download the PDF engine. Check your internet connection."));
+    document.head.appendChild(s);
+  });
+  return jspdfPromise;
+}
+
+/* ---- load pdf.js on demand ---- */
+let pdfjsPromise = null;
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(pdfjsPromise) return pdfjsPromise;
+  pdfjsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = PDFJS_CDN;
+    s.async = true;
+    s.onload = () => {
+      if(!window.pdfjsLib){ reject(new Error("PDF reader failed to initialise")); return; }
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_CDN;
+      resolve(window.pdfjsLib);
+    };
+    s.onerror = () => reject(new Error("Could not download the PDF reader. Check your internet connection."));
+    document.head.appendChild(s);
+  });
+  return pdfjsPromise;
+}
+
+/* ============================================================
+   PDF ROSTER IMPORT
+   Rebuilds the roster table from a PDF by reading the text
+   positions, so each cell lands in the column it belongs to.
+   ============================================================ */
+
+/* Read a PDF and return, for each page, the text items with their
+   coordinates. Text-based PDFs keep their layout, so the x position of
+   each item tells us which column it came from. */
+async function readPdfPages(file, onProgress){
+  const pdfjsLib = await loadPdfJs();
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({ data:buf }).promise;
+
+  const pages = [];
+  for(let p = 1; p <= doc.numPages; p++){
+    if(onProgress) onProgress("Reading page " + p + " of " + doc.numPages + "…", 10 + (p/doc.numPages)*60);
+    const page = await doc.getPage(p);
+    const viewport = page.getViewport({ scale:1 });
+    const content = await page.getTextContent();
+
+    /* keep the items that carry real text */
+    const items = content.items
+      .filter(it => it.str && it.str.trim().length)
+      .map(it => ({
+        text: it.str,
+        x: it.transform[4],
+        y: viewport.height - it.transform[5],   /* flip to a top-down origin */
+        w: it.width,
+        h: it.height
+      }));
+
+    pages.push({ items, width:viewport.width, height:viewport.height });
+  }
+  return pages;
+}
+
+/* Group text items into rows by their vertical position.
+   Items whose baselines differ by less than a tolerance belong to the
+   same printed line. */
+function groupIntoRows(items, tolerance){
+  const tol = tolerance || 4;
+  const sorted = [...items].sort((a,b) => a.y - b.y);
+  const rows = [];
+  let cur = [];
+  let curY = null;
+  for(const it of sorted){
+    if(curY === null || Math.abs(it.y - curY) <= tol){
+      cur.push(it);
+      if(curY === null) curY = it.y;
+      else curY = (curY * (cur.length-1) + it.y) / cur.length;
+    }else{
+      rows.push(cur);
+      cur = [it];
+      curY = it.y;
+    }
+  }
+  if(cur.length) rows.push(cur);
+  /* within a row, order left to right */
+  rows.forEach(r => r.sort((a,b) => a.x - b.x));
+  return rows;
+}
+
+/* Work out the column boundaries.
+   Every printed heading becomes a column, even one we do not recognise
+   ("S NO", "REMARK"), so those columns still take up their slot and the
+   columns after them keep their alignment.
+   A heading repeated side by side ("STD ... STD", "STA ... STA") is a second
+   time column — the roster prints local time first and UTC second — so the
+   repeat is marked as ignored.
+   The data's own left edges are clustered to find where each column actually
+   sits, then each heading is matched to the nearest cluster, in order. */
+function columnBoundaries(headerRow, totalWidth, dataRows){
+  const headings = headerRow
+    .slice()
+    .sort((a,b) => a.x - b.x)
+    .map((it, i) => ({
+      key: matchHeader(it.text),
+      text: it.text.trim(),
+      x: it.x,
+      right: it.x + (it.w || 0),
+      i: i
+    }));
+  if(!headings.length) return [];
+
+  const seen = {};
+  headings.forEach(h => {
+    if(!h.key) h.key = "__unused" + h.i;                 /* no known heading */
+    else if(seen[h.key]) h.key = "__repeat" + h.i;       /* second STD / STA */
+    else seen[h.key] = true;
+  });
+
+  /* cluster the data rows by their left edges */
+  const clusterMap = {};
+  (dataRows || []).forEach(row => {
+    const items = row.slice().sort((a,b) => a.x - b.x);
+    const rowClusters = [];
+    items.forEach(it => {
+      const cl = rowClusters[rowClusters.length-1];
+      if(!cl || it.x - cl.left > 12){
+        rowClusters.push({ left:it.x, right:it.x + (it.w||0) });
+      }else{
+        cl.left = Math.min(cl.left, it.x);
+        cl.right = Math.max(cl.right, it.x + (it.w||0));
+      }
+    });
+    rowClusters.forEach(cl => {
+      const key = Math.round(cl.left / 3) * 3;
+      if(!clusterMap[key]) clusterMap[key] = { left:Infinity, right:-Infinity, count:0 };
+      const c = clusterMap[key];
+      c.left = Math.min(c.left, cl.left);
+      c.right = Math.max(c.right, cl.right);
+      c.count++;
+    });
+  });
+
+  const clusters = Object.keys(clusterMap)
+    .map(k => clusterMap[k])
+    .filter(c => c.count >= 2)
+    .sort((a,b) => a.left - b.left);
+
+  /* no data to learn from: divide the page by the heading positions */
+  if(!clusters.length){
+    headings.forEach((h, i) => {
+      h.left  = i === 0 ? 0 : (headings[i-1].x + h.x) / 2;
+      h.right = i === headings.length - 1 ? totalWidth : (h.x + headings[i+1].x) / 2;
+    });
+    return headings.map(h => ({ key:h.key, text:h.text, left:h.left, right:h.right }));
+  }
+
+  /* Align headings to data clusters with a sequence alignment, so a heading
+     that has no data at all ("SD", "REMARK") is skipped instead of pulling
+     every following column one place to the left. */
+  const N = headings.length, M = clusters.length;
+  const centre = (a) => (a.left + a.right) / 2;
+  const hCentre = (h) => (h.x + h.right) / 2;
+  const SKIP_HEADING = 0;      /* an empty column is normal */
+  const SKIP_CLUSTER = 30;     /* data with no heading is unusual */
+
+  const dp = Array.from({ length: N + 1 }, () => new Array(M + 1).fill(Infinity));
+  const step = Array.from({ length: N + 1 }, () => new Array(M + 1).fill(""));
+  dp[0][0] = 0;
+  for(let i = 1; i <= N; i++){ dp[i][0] = dp[i-1][0] + SKIP_HEADING; step[i][0] = "H"; }
+  for(let j = 1; j <= M; j++){ dp[0][j] = dp[0][j-1] + SKIP_CLUSTER; step[0][j] = "C"; }
+
+  for(let i = 1; i <= N; i++){
+    for(let j = 1; j <= M; j++){
+      const match = dp[i-1][j-1] + Math.abs(hCentre(headings[i-1]) - centre(clusters[j-1]));
+      const skipH = dp[i-1][j] + SKIP_HEADING;
+      const skipC = dp[i][j-1] + SKIP_CLUSTER;
+      let best = match, how = "M";
+      if(skipH < best){ best = skipH; how = "H"; }
+      if(skipC < best){ best = skipC; how = "C"; }
+      dp[i][j] = best; step[i][j] = how;
+    }
+  }
+
+  /* walk back to see which heading owns which cluster */
+  const owner = new Array(N).fill(null);
+  let i = N, j = M;
+  while(i > 0 && j > 0){
+    const how = step[i][j];
+    if(how === "M"){ owner[i-1] = clusters[j-1]; i--; j--; }
+    else if(how === "H"){ i--; }
+    else { j--; }
+  }
+
+  const matched = headings.map((h, k) => owner[k]
+    ? { key:h.key, text:h.text, left:owner[k].left, right:owner[k].right }
+    : { key:h.key, text:h.text, left:null, right:null });
+
+  /* a column with no data of its own keeps an empty slot between its neighbours */
+  matched.forEach((c, i) => {
+    if(c.left !== null) return;
+    const prev = matched[i-1], next = matched[i+1];
+    if(prev && prev.right !== null){ c.left = prev.right; c.right = prev.right; }
+    else if(next && next.left !== null){ c.left = next.left; c.right = next.left; }
+    else { c.left = 0; c.right = 0; }
+  });
+
+  /* the boundary between two columns sits midway between their data */
+  for(let i = 0; i < matched.length; i++){
+    const prev = matched[i-1], next = matched[i+1];
+    if(prev){
+      const gapStart = prev.right, gapEnd = matched[i].left;
+      matched[i].left = (gapEnd > gapStart) ? (gapStart + gapEnd)/2 : gapEnd;
+    }else{
+      matched[i].left = 0;
+    }
+    if(next){
+      const gapStart = matched[i].right, gapEnd = next.left;
+      matched[i].right = (gapEnd > gapStart) ? (gapStart + gapEnd)/2 : gapEnd;
+    }else{
+      matched[i].right = totalWidth;
+    }
+  }
+  return matched;
+}
+
+/* Place each text item of a row into the column it falls in.
+   The item's left edge is used rather than its centre, because roster data
+   is normally left-aligned within its cell. */
+function assignRowToColumns(rowItems, cols){
+  const cells = {};
+  cols.forEach(c => { cells[c.key] = []; });
+  rowItems.forEach(it => {
+    const x = it.x;
+    let target = null;
+    for(const c of cols){
+      if(x >= c.left && x < c.right){ target = c; break; }
+    }
+    if(!target) target = cols.reduce((best,c) => {
+      const d = Math.abs(x - c.left);
+      const bd = Math.abs(x - best.left);
+      return d < bd ? c : best;
+    }, cols[0]);
+    cells[target.key].push(it.text);
+  });
+  const out = {};
+  Object.keys(cells).forEach(k => { out[k] = cells[k].join(" ").trim(); });
+  return out;
+}
+
+/* Find the header row: the row that names the most known columns. */
+function findHeaderRow(rows){
+  let best = null, bestScore = 0;
+  rows.forEach((row, i) => {
+    const seen = {};
+    let score = 0;
+    row.forEach(it => {
+      const key = matchHeader(it.text);
+      if(key && seen[key] === undefined){ seen[key] = true; score++; }
+    });
+    if(score > bestScore){ bestScore = score; best = { index:i, row }; }
+  });
+  return bestScore >= 2 ? best : null;
+}
+
+/* Turn the text of one page into duty-day rows. */
+function rowsFromPdfPage(page){
+  const rows = groupIntoRows(page.items, 4);
+  if(!rows.length) return { rows:[], headerFound:false };
+
+  const header = findHeaderRow(rows);
+  if(!header) return { rows:[], headerFound:false };
+
+  const cols = columnBoundaries(header.row, page.width, rows.slice(header.index + 1));
+  if(!cols.length) return { rows:[], headerFound:false };
+
+  const out = [];
+  for(let i = header.index + 1; i < rows.length; i++){
+    /* stop at a page footer or any other text that is not a roster row */
+    const text = rows[i].map(it => it.text).join(" ").trim();
+    if(/^page\s+\d+(\s+of\s+\d+)?$/i.test(text)) break;
+    if(/printed\s+by|printed\s+on|total\s+block|^arms/i.test(text)) break;
+    if(/^(generated|crew|base)\s*:/i.test(text) && rows[i].length < 3) break;
+
+    const cells = assignRowToColumns(rows[i], cols);
+    const rec = pdfCellsToRow(cells);
+    if(rec) out.push(rec);
+  }
+  return { rows:out, headerFound:true, cols:cols.length };
+}
+
+/* Convert one row of PDF cells into a duty-day record. */
+function pdfCellsToRow(cells){
+  const raw = (v) => String(v || "").trim();
+  const dateStr = raw(cells.date);
+  const timeStr = (v) => {
+    const s = raw(v);
+    if(!s) return "";
+    /* the roster writes times as 0810L */
+    const m = s.match(/(\d{1,2}):?(\d{2})/);
+    if(m) return pad(parseInt(m[1],10)) + ":" + m[2];
+    return "";
+  };
+
+  let date = "";
+  if(dateStr){
+    const m = dateStr.match(/(\d{1,2})[-\s]([A-Za-z]{3,9})[-\s](\d{2,4})/);
+    if(m){
+      const mo = MONTHS[m[2].slice(0,4).toLowerCase()] || MONTHS[m[2].slice(0,3).toLowerCase()];
+      if(mo) date = isoOf(expandYear(parseInt(m[3],10)), mo, parseInt(m[1],10));
+    }
+    if(!date) date = parseDate(dateStr) || "";
+  }
+
+  /* The roster prints three kinds of duty line:
+       OP - (...)   a flight, identified by Flight No
+       STB - H04    standby, no flight number; STD..STA is the duty window
+       DO / AL      a day off or leave; the 00:00..23:59 times are placeholders
+     The Excel sheet names the duty after the flight number, or after the
+     code in the type column ("STB - H04" -> "H04"). */
+  const flightNo = raw(cells.flight).toUpperCase();
+  const typeText = raw(cells.type).toUpperCase();
+
+  let duty = flightNo ? formatFlightNo(flightNo) : "";
+  if(!duty){
+    const dash = typeText.lastIndexOf(" - ");
+    duty = dash !== -1 ? typeText.slice(dash + 3).trim() : typeText;
+  }
+
+  const isDO = /^DO\b/.test(flightNo) || /^DO\b/.test(typeText);
+  const isAL = /^AL\b/.test(typeText);
+  const isAllDay = isDO || isAL;          /* no real duty times */
+  /* A flight duty is named by a flight number ("HB702"). Standby ("H04") and
+     other duties ("A", "GD") carry a short code instead, even though the
+     roster prints a duty window in their STD / STA columns. */
+  const isFlight = !isAllDay && looksLikeFlightNo(flightNo);
+
+  /* FROM + TO are printed as two columns */
+  const sector = raw(cells.sector) ||
+    [raw(cells.sectorFrom), raw(cells.sectorTo)].filter(Boolean).join(" ");
+
+  /* The PDF is re-expressed in the Excel columns:
+       flight  -> Dep Time = STD, Arr Time = STA,
+                  Duty Start = Dep Time - 65, Duty End = Arr Time + 30
+       standby -> Duty Start = STD, Duty End = STA (no departure / arrival)
+       day off -> every time left blank
+     Duty Period is always the total from Duty Start to Duty End, and a
+     printed Duty Start / Duty End is used when there is no STD or STA. */
+  const std = timeStr(cells.dep);
+  const sta = timeStr(cells.arr);
+
+  let dutyStart = "", dutyEnd = "", depOut = "", arrOut = "";
+
+  if(isAllDay){
+    /* placeholder 00:00 - 23:59 times are not a duty */
+  }else if(isFlight){
+    depOut = std;
+    arrOut = sta;
+    if(std){
+      const m = hmToMin(std);
+      if(m !== null) dutyStart = minToHm(m - 65);
+    }
+    if(sta){
+      const m = hmToMin(sta);
+      if(m !== null) dutyEnd = minToHm(m + 30);
+    }
+  }else{
+    dutyStart = std;
+    dutyEnd = sta;
+  }
+
+  if(!dutyStart) dutyStart = timeStr(cells.start);
+  if(!dutyEnd) dutyEnd = timeStr(cells.end);
+
+  /* The duty period is the total time from duty start to duty end. */
+  let dutyPeriod = "";
+  if(dutyStart && dutyEnd){
+    const mins = minutesApart(dutyStart, dutyEnd);
+    if(mins !== null) dutyPeriod = rosterDuration(mins);
+  }
+  if(!dutyPeriod) dutyPeriod = normaliseDuration(raw(cells.period));
+
+  /* The block hour is read from the sheet — it is a local-time figure and
+     cannot be derived from STD and STA alone. A day off has none. */
+  const blockHour = isAllDay ? "" : normaliseDuration(raw(cells.block));
+
+  /* a row with nothing in it is not a duty day */
+  if(!date && !duty && !dutyStart) return null;
+
+  /* The Excel sheet shows the weekday as a single letter. If the PDF does not
+     print it, take it from the date so every import lands in the sheet format. */
+  let day = raw(cells.day).toUpperCase();
+  if(!day && date){
+    const d = new Date(date + "T00:00:00");
+    if(!isNaN(d)) day = "SMTWTFS"[d.getDay()];
+  }
+
+  return {
+    date,
+    day: day,
+    sd: raw(cells.sd),
+    type: isDO ? "DO" : "Flight",
+    noDepArr: !isFlight,
+    start: dutyStart,
+    end: dutyEnd,
+    dep: depOut,
+    arr: arrOut,
+    sector: isFlight ? sector : "",
+    period: dutyPeriod,
+    block: blockHour,
+    flight: duty,
+    /* "STB - H04" is a standby duty — the swap request needs to know */
+    standby: /^STB/.test(typeText)
+  };
+}
+
+/* The roster prints "HB880"; the sheet writes "HB 880". */
+function formatFlightNo(v){
+  const s = String(v || "").trim().toUpperCase();
+  const m = s.match(/^([A-Z]{2,4})\s*(\d.*)$/);
+  return m ? m[1] + " " + m[2] : s;
+}
+
+/* A flight number is an airline code followed by a number: "HB702", "HB 2352",
+   "3U8888". A standby or other duty code ("H04", "H14", "A", "GD") does not
+   match, so it is not treated as a flight. */
+function looksLikeFlightNo(v){
+  const s = String(v || "").trim().toUpperCase();
+  return /^([A-Z]{2,4}|\d[A-Z])\s*\d{1,5}[A-Z]?$/.test(s);
+}
+
+/* ---- OCR status helpers ---- */
+function ocrSetStatus(msg, pct){
+  document.getElementById("ocr-progress").classList.remove("hidden");
+  document.getElementById("ocr-status").textContent = msg;
+  if(typeof pct === "number"){
+    document.getElementById("ocr-bar").style.width = Math.max(0, Math.min(100, pct)) + "%";
+  }
+}
+function ocrShowError(msg){
+  const el = document.getElementById("ocr-error");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+  document.getElementById("ocr-progress").classList.add("hidden");
+}
+function ocrClearError(){
+  document.getElementById("ocr-error").classList.add("hidden");
+  document.getElementById("ocr-error").textContent = "";
+}
+
+/* ============================================================
+   PDF COLUMN HEADERS
+   Maps the column headings printed on a PDF roster to fields.
+   ============================================================ */
+
+/* Column synonyms — the first match found in the header wins.
+   In the GBA roster the "Duty" column holds the flight number (HB 880),
+   a duty code (H04) or "DO" — so it maps to the flight column.
+   The PDF roster names the same fields differently, so both sets of names
+   are listed here:
+     DATE OF DUTY -> date        Flight No -> flight
+     FROM + TO    -> sector      STD -> dep (standard departure)
+     STA          -> arr (scheduled arrival)
+   "STA" is deliberately not a synonym for the duty-start column: on the PDF
+   roster STA means scheduled arrival, and the duty start is derived from
+   STD instead. */
+const OCR_HEADERS = {
+  date:     ["date","date of duty","duty date","day of month","datum"],
+  day:      ["day","day of week","weekday","dow"],
+  sd:       ["sd","s/d","standby duty","s d"],
+  type:     ["type","type of duty","duty type","duty code","category","activity","remarks"],
+  start:    ["start","report","report time","out","start time","sgn","sign on","check-in","check in","duty start","duty start time"],
+  end:      ["end","finish","off","end time","ata","off time","sgn off","sign-off","check-out","check out","landing","duty end","duty end time"],
+  dep:      ["dep","dep time","departure","departure time","std","standard departure"],
+  arr:      ["arr","arr time","arrival","arrival time","sta","scheduled arrival"],
+  sectorFrom: ["from"],
+  sectorTo:   ["to"],
+  sector:   ["sector","sectors","route","routing","pair","flight pair","from + to","from+to","from to"],
+  period:   ["duty period","duty period time","duty periods","duty hrs","total time"],
+  block:    ["block","block hours","blk","hours","dur","duration","duty hours","block hrs","block hr","block hour"],
+  flight:   ["duty","flight","flt","flight no","flight number","flt no","flight #"]
+};
+
+function normHeader(s){
+  return String(s||"").toLowerCase().replace(/[^a-z0-9#]/g,"");
+}
+function matchHeader(cell){
+  const n = normHeader(cell);
+  if(!n) return null;
+  for(const key in OCR_HEADERS){
+    for(const syn of OCR_HEADERS[key]){
+      const t = syn.replace(/[^a-z0-9#]/g,"");
+      if(n === t) return key;
+    }
+  }
+  /* looser: header contains the synonym as a whole word */
+  for(const key in OCR_HEADERS){
+    for(const syn of OCR_HEADERS[key]){
+      const t = syn.replace(/[^a-z0-9#]/g,"");
+      if(t.length >= 3 && n.indexOf(t) !== -1) return key;
+    }
+  }
+  return null;
+}
+
+/* Parse a date token into "YYYY-MM-DD".
+   Handles 10/11/2026, 10-11-2026, 2026-11-10, 10 Nov 2026, Nov 10 2026, 10.11.26 */
+const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
+function parseDate(tok){
+  if(!tok) return null;
+  const s = String(tok).trim();
+
+  /* ISO: 2026-11-10 */
+  let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if(m) return isoOf(+m[1], +m[2], +m[3]);
+
+  /* 10 Nov 2026 / 10 November 2026 */
+  m = s.match(/^(\d{1,2})[\s-]+([A-Za-z]{3,9})[\s-]+(\d{2,4})$/);
+  if(m){
+    const mo = MONTHS[m[2].slice(0,4).toLowerCase()] || MONTHS[m[2].slice(0,3).toLowerCase()];
+    if(mo) return isoOf(expandYear(+m[3]), mo, +m[1]);
+  }
+  /* Nov 10 2026 */
+  m = s.match(/^([A-Za-z]{3,9})[\s-]+(\d{1,2})[\s-]+(\d{2,4})$/);
+  if(m){
+    const mo = MONTHS[m[1].slice(0,4).toLowerCase()] || MONTHS[m[1].slice(0,3).toLowerCase()];
+    if(mo) return isoOf(expandYear(+m[3]), mo, +m[2]);
+  }
+  /* numeric d/m/y or m/d/y */
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+  if(m){
+    const a = +m[1], b = +m[2], y = expandYear(+m[3]);
+    /* if the first number cannot be a month, treat it as day-first */
+    if(a > 12 && b <= 12) return isoOf(y, b, a);
+    return isoOf(y, a, b);
+  }
+  /* single number = day of the current month */
+  m = s.match(/^(\d{1,2})$/);
+  if(m){
+    const now = new Date();
+    return isoOf(now.getFullYear(), now.getMonth()+1, +m[1]);
+  }
+  return null;
+}
+function expandYear(y){
+  if(y >= 1000) return y;
+  return y < 70 ? 2000 + y : 1900 + y;
+}
+function isoOf(y, m, d){
+  if(!y || !m || !d) return null;
+  if(m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return y + "-" + pad(m) + "-" + pad(d);
+}
+
+/* ============================================================
+   OCR ROW EDITOR
+   ============================================================ */
+/* Roster times are written 0810L — a plain four-digit 24-hour field keeps the
+   editor unambiguous (the browser's time widget would show 12-hour clocks). */
+function digitsToHm(v){
+  const s = String(v || "").replace(/[^0-9]/g, "");
+  if(!s) return "";
+  if(s.length <= 2) return pad(parseInt(s,10)) + ":00";
+  if(s.length === 3) return "0" + s[0] + ":" + s.slice(1);
+  return s.slice(0,2) + ":" + s.slice(2,4);
+}
+function hmToDigits(v){
+  const s = String(v || "").trim();
+  if(!s) return "";
+  if(/^\d{1,2}:\d{2}$/.test(s)){
+    const p = s.split(":");
+    return pad(parseInt(p[0],10)) + p[1];
+  }
+  return s.replace(/[^0-9]/g, "").slice(0,4);
+}
+
+/* The editable rows use the same columns as the roster sheet, so what is
+   corrected here is exactly what the preview and the PDF show. */
+function renderOcrRows(){
+  const host = document.getElementById("ocr-rows");
+  host.innerHTML = "";
+  ocrRows.forEach((r, i) => {
+    const el = document.createElement("div");
+    el.className = "ocr-row-wrap";
+
+    const main = document.createElement("div");
+    main.className = "ocr-row";
+    main.innerHTML =
+      '<input type="date" class="o-date" value="'+esc(r.date||"")+'">' +
+      '<input type="text" class="o-day" placeholder="S" maxlength="3" value="'+esc(r.day||"")+'">' +
+      '<input type="text" class="o-flight" placeholder="Duty" value="'+esc(r.flight||"")+'">' +
+      '<input type="text" class="o-sd" placeholder="SD" value="'+esc(r.sd||"")+'">' +
+      '<input type="text" class="o-sector" placeholder="Sector" value="'+esc(r.sector||"")+'">' +
+      '<input type="text" inputmode="numeric" maxlength="5" class="o-start" placeholder="HHMM" value="'+esc(hmToDigits(r.start))+'">' +
+      '<input type="text" inputmode="numeric" maxlength="5" class="o-dep" placeholder="HHMM" value="'+esc(hmToDigits(r.dep))+'">' +
+      '<input type="text" inputmode="numeric" maxlength="5" class="o-arr" placeholder="HHMM" value="'+esc(hmToDigits(r.arr))+'">' +
+      '<input type="text" inputmode="numeric" maxlength="5" class="o-end" placeholder="HHMM" value="'+esc(hmToDigits(r.end))+'">' +
+      '<input type="text" class="o-period" placeholder="h:mm" value="'+esc(r.period||"")+'">' +
+      '<input type="text" class="o-block" placeholder="h:mm" value="'+esc(r.block||"")+'">' +
+      '<button class="row-del" title="Remove row" aria-label="Remove row">×</button>';
+
+    /* flag rows the reader could not read confidently */
+    if(!r.date) main.querySelector(".o-date").classList.add("low");
+    if(!r.start && !r.end && r.flight && !/^DO$/i.test(r.flight.trim()))
+      main.querySelector(".o-start").classList.add("low");
+
+    main.querySelector(".row-del").addEventListener("click", () => {
+      const idx = ocrRows.indexOf(r);
+      if(idx > -1) ocrRows.splice(idx, 1);
+      renderOcrRows();
+      refreshRosterPdfPanel();
+    });
+
+    /* keep the model in step with manual edits */
+    const bind = (scope, key, cls) => {
+      const field = scope.querySelector("." + cls);
+      if(!field) return;
+      const evt = (field.tagName === "SELECT") ? "change" : "input";
+      field.addEventListener(evt, () => {
+        r[key] = field.value;
+        /* a duty start or block hour typed by hand is kept as it is typed */
+        if(key === "block") r.blockFollowsTimes = false;
+        if(key === "start") r.startFollowsDep = false;
+        if(key === "date" || key === "start" || key === "end"){
+          field.classList.remove("low");
+          if(key === "date" && !r.date) field.classList.add("low");
+        }
+        renderRosterPreview(currentRosterRecords());
+      });
+    };
+    ["date","day","flight","sd","sector","start","dep","arr","end","period","block"]
+      .forEach(k => bind(main, k, "o-" + k));
+
+    /* picking a date sets the weekday and puts the row back in date order */
+    main.querySelector(".o-date").addEventListener("change", () => {
+      if(r.date){
+        const d = dayLetter(r.date);
+        if(d && r.day !== d){
+          r.day = d;
+          main.querySelector(".o-day").value = d;
+        }
+      }
+      sortOcrRowsByDate();
+      renderOcrRows();
+      refreshRosterPdfPanel();
+
+      /* the row may have moved — keep the cursor on its date */
+      const moved = document.querySelectorAll("#ocr-rows .ocr-row")[ocrRows.indexOf(r)];
+      if(moved){
+        const f = moved.querySelector(".o-date");
+        if(f) f.focus();
+      }
+    });
+
+    /* times are stored as HH:MM however they were typed */
+    ["start","dep","arr","end"].forEach(k => {
+      const field = main.querySelector(".o-" + k);
+      field.addEventListener("blur", () => {
+        const hm = digitsToHm(field.value);
+        r[k] = hm;
+        field.value = hmToDigits(hm);
+
+        /* a duty with no start yet takes it from the departure time */
+        if((r.startFollowsDep || !r.start) && r.dep){
+          const m = hmToMin(r.dep);
+          if(m !== null) r.start = minToHm(m - 65);
+        }
+        refreshDerivedTimes(r, k);
+
+        main.querySelector(".o-start").value = hmToDigits(r.start);
+        main.querySelector(".o-end").value = hmToDigits(r.end);
+        main.querySelector(".o-period").value = r.period || "";
+        main.querySelector(".o-block").value = r.block || "";
+        renderRosterPreview(currentRosterRecords());
+      });
+    });
+
+    el.appendChild(main);
+    host.appendChild(el);
+  });
+  document.getElementById("ocr-count").textContent =
+    ocrRows.length + " row(s)" + (ocrRows.filter(r=>!r.date).length ? " — some need a date" : "");
+}
+
+/* The fields that follow the flight times:
+     Duty End    = Arr Time + 30 min
+     Duty Period = Duty Start to Duty End
+     Block Hour  = Dep Time to Arr Time
+   Amending the Dep Time or the Arr Time moves all three. The Duty Start is the
+   crew's report time and is left where it is, unless it was worked out from the
+   departure time to begin with. A duty end or block hour typed by hand is kept. */
+function refreshDerivedTimes(r, changed){
+  const timeChanged = (changed === "dep" || changed === "arr");
+
+  if(timeChanged && r.arr){
+    const m = hmToMin(r.arr);
+    if(m !== null) r.end = minToHm(m + 30);
+  }
+  if(r.start && r.end){
+    const mins = minutesApart(r.start, r.end);
+    if(mins !== null) r.period = rosterDuration(mins);
+  }
+  if(timeChanged && r.blockFollowsTimes !== false && r.dep && r.arr){
+    const bm = minutesApart(r.dep, r.arr);
+    if(bm !== null) r.block = rosterDuration(bm);
+  }
+}
+
+/* Put the rows back into date order, so a duty added by hand lands in the
+   right place. The sort is stable, so rows sharing a date keep the order they
+   were read in and a two-sector duty day stays together. */
+function sortOcrRowsByDate(){
+  const order = ocrRows.map((r, i) => i);
+  order.sort((a, b) => {
+    const da = ocrRows[a].date || "";
+    const db = ocrRows[b].date || "";
+    if(da === db) return a - b;
+    if(!da) return 1;   /* a row with no date yet waits at the end */
+    if(!db) return -1;
+    return da < db ? -1 : 1;
+  });
+  ocrRows = order.map(i => ocrRows[i]);
+}
+
+/* Add a new flight duty to the editor. The flight number identifies it and
+   the times fill in the rest: Duty Start = Dep Time - 65 min,
+   Duty End = Arr Time + 30 min, Duty Period = Duty Start to Duty End and
+   Block Hour = Dep Time to Arr Time. */
+function addFlightRow(){
+  ocrRows.push({
+    date: "", type: "Flight", day: "", duty: "", flight: "", sd: "",
+    sector: "", start: "", end: "", dep: "", arr: "", period: "", block: "",
+    noDepArr: false, startFollowsDep: true, blockFollowsTimes: true
+  });
+  renderOcrRows();
+  refreshRosterPdfPanel();
+
+  /* put the cursor in the new row's date field */
+  const dates = document.querySelectorAll("#ocr-rows .o-date");
+  const field = dates[dates.length - 1];
+  if(field){
+    field.focus();
+    const wrap = field.closest(".ocr-row-wrap");
+    if(wrap && wrap.scrollIntoView) wrap.scrollIntoView({ block:"nearest" });
+  }
+}
+
+/* ============================================================
+   ROSTER MODEL + PDF EXPORT
+   ============================================================ */
+
+/* Day letter for a date, matching the roster's S M T W F convention */
+const DAY_LETTERS = ["S","M","T","W","T","F","S"];
+function dayLetter(iso){
+  if(!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d)) return "";
+  return DAY_LETTERS[d.getDay()];
+}
+
+/* Format a date as the roster shows it: 01-Nov-26 */
+function rosterDate(iso){
+  if(!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d)) return iso;
+  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+  return pad(d.getDate()) + "-" + mon + "-" + String(d.getFullYear()).slice(2);
+}
+
+/* Format a time as the roster shows it: 0810L */
+function rosterTime(hm){
+  if(!hm) return "";
+  const m = String(hm).match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return "";
+  return pad(m[1]) + pad(m[2]) + "L";
+}
+
+/* Minutes between two HH:MM times, rolling over midnight when needed */
+function minutesApart(startHm, endHm){
+  const s = hmToMin(startHm), e = hmToMin(endHm);
+  if(s === null || e === null) return null;
+  let d = e - s;
+  if(d < 0) d += 1440;
+  return d;
+}
+
+/* Shift a time by a number of minutes, rolling over midnight when needed. */
+function shiftTime(hm, mins){
+  const m = hmToMin(hm);
+  if(m === null) return "";
+  return minToHm(m + mins);
+}
+
+/* Format minutes as H:MM / HH:MM (the roster's duty period and block hour style) */
+function rosterDuration(mins){
+  if(mins === null || mins === undefined) return "";
+  const h = Math.floor(mins/60), m = mins % 60;
+  return h + ":" + pad(m);
+}
+
+/* Build a full roster record from the fields we know.
+   Duty period = duty start to duty end.
+   Block hour  = dep to arr when both are known, otherwise the duty period. */
+function buildRosterRecord(o){
+  const rec = {
+    date: o.date || "",
+    day: o.day || dayLetter(o.date),
+    duty: o.duty || "",
+    sd: o.sd || "",
+    sector: o.sector || "",
+    dutyStart: o.dutyStart || "",
+    depTime: o.depTime || "",
+    arrTime: o.arrTime || "",
+    dutyEnd: o.dutyEnd || "",
+    dutyPeriod: o.dutyPeriod || "",
+    blockHour: o.blockHour || ""
+  };
+  if(!rec.dutyPeriod){
+    const dm = minutesApart(rec.dutyStart, rec.dutyEnd);
+    if(dm !== null && rec.dutyStart && rec.dutyEnd) rec.dutyPeriod = rosterDuration(dm);
+  }
+  if(!rec.blockHour){
+    /* Block hour is a local-time figure; deriving it from Dep/Arr is only a
+       fallback for a roster that prints no BLOCK column. It is never the
+       duty period — a day off or standby has no block. */
+    const bm = minutesApart(rec.depTime, rec.arrTime);
+    if(bm !== null && rec.depTime && rec.arrTime) rec.blockHour = rosterDuration(bm);
+  }
+  rec.blockHour = normaliseDuration(rec.blockHour);
+  rec.dutyPeriod = normaliseDuration(rec.dutyPeriod);
+  return rec;
+}
+
+/* Normalise a duration to H:MM.
+   Accepts "4:45", "04:45", "4.75" (decimal hours) or "4h45". */
+function normaliseDuration(v){
+  if(v === null || v === undefined || v === "") return "";
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2}):(\d{2})$/);
+  if(m) return parseInt(m[1],10) + ":" + m[2];
+  m = s.match(/^(\d{1,2})[hH](\d{1,2})$/);
+  if(m) return parseInt(m[1],10) + ":" + pad(parseInt(m[2],10));
+  m = s.match(/^(\d+(?:[.,]\d+)?)$/);
+  if(m){
+    const hrs = parseFloat(m[1].replace(",", "."));
+    if(isFinite(hrs)){
+      const mins = Math.round(hrs * 60);
+      return Math.floor(mins/60) + ":" + pad(mins%60);
+    }
+  }
+  return s;
+}
+
+/* Map a parsed OCR row onto a roster record */
+function ocrRowToRoster(r){
+  const dutyVal = (r.flight || "").toUpperCase();
+  const isDO = dutyVal === "DO" || r.type === "DO";
+  const isStby = r.type === "Standby";
+  const hasSector = !!r.sector;
+  const hasDepArr = !!r.dep && !!r.arr;
+  /* a standby or other non-flight duty has no departure / arrival at all */
+  const noDepArr = !!r.noDepArr;
+  return buildRosterRecord({
+    date: r.date,
+    day: r.day || "",
+    sd: r.sd || "",
+    duty: isDO ? "DO" : (r.flight || (isStby ? "STBY" : "")),
+    sector: hasSector ? r.sector : (isStby ? (r.flight || "") : ""),
+    dutyStart: r.start,
+    dutyEnd: r.end,
+    /* dep/arr are only shown separately when the roster actually records them */
+    depTime: noDepArr ? "" : (hasDepArr ? r.dep : ((isDO || isStby) ? "" : r.start)),
+    arrTime: noDepArr ? "" : (hasDepArr ? r.arr : ((isDO || isStby) ? "" : r.end)),
+    dutyPeriod: r.period || "",
+    blockHour: r.block || ""
+  });
+}
+
+/* Format a record's values the way the roster sheet displays them:
+     date  -> 01-Nov-26      times -> 0810L
+     duty period / block hour -> H:MM                            */
+function rosterDisplayValue(rec, key){
+  const v = rec[key];
+  if(v === null || v === undefined || v === "") return "";
+  switch(key){
+    case "date": return rosterDate(v);
+    case "dutyStart":
+    case "depTime":
+    case "arrTime":
+    case "dutyEnd": return rosterTime(v);
+    case "dutyPeriod":
+    case "blockHour": return rosterDurationText(v);
+    default: return String(v);
+  }
+}
+
+/* Accept a duration as "7:20", "07:20" or "07:20" and show it as H:MM */
+function rosterDurationText(v){
+  const s = String(v).trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return s;
+  return parseInt(m[1],10) + ":" + m[2];
+}
+
+/* Sum the Block Hour column of a set of roster rows and return it as H:MM.
+   Only block time is added up — duty periods and non-flight duties have no
+   block, so they contribute nothing. */
+function totalBlockHours(records){
+  let mins = 0;
+  (records || []).forEach(rec => {
+    const m = hmToMin(rosterDurationText(rec.blockHour || ""));
+    if(m !== null) mins += m;
+  });
+  return rosterDuration(mins);
+}
+
+/* Count the duty days on a roster: DO and AL are days off, not duty, so they
+   are not counted, and several flights on the same date are one duty day. */
+function countRosterDutyDays(records){
+  const seen = {};
+  let count = 0;
+  (records || []).forEach((rec, i) => {
+    const duty = String(rec.duty || "").trim().toUpperCase();
+    if(/^DO(\s|$)/.test(duty) || /^AL(\s|$)/.test(duty)) return;
+    const key = rec.date || ("row" + i);
+    if(seen[key]) return;
+    seen[key] = true;
+    count++;
+  });
+  return count;
+}
+
+/* The sheet prints the date once for a multi-sector duty day: the following
+   rows of the same date leave the date cell blank. */
+function rosterDisplayRecords(records){
+  let prevDate = "";
+  return (records || []).map(rec => {
+    const blank = !!rec.date && rec.date === prevDate;
+    if(rec.date) prevDate = rec.date;
+    return blank ? Object.assign({}, rec, { date:"" }) : rec;
+  });
+}
+
+/* Render the roster as a PDF using jsPDF.
+   The table reproduces the GBA roster layout: Date, Day, Duty, Sector,
+   Duty Start, Dep Time, Arr Time, Duty End, Duty Period, Block Hour. */
+async function exportRosterPdf(records, opts){
+  const JsPdf = await loadJsPdf();
+  const o = opts || {};
+
+  /* The exported table always carries the sheet names — Date, Duty, Sector,
+     Dep Time, Arr Time, Block Hour — matching the roster worksheet. */
+
+  const doc = new JsPdf({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  const margin = 12;
+  let y = margin;
+
+  /* ---- title block ---- */
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.setTextColor(10, 92, 99);
+  doc.text("GBA ROSTER", margin, y);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(95, 125, 128);
+  const titleRight = [];
+  if(o.crewName) titleRight.push("Crew: " + o.crewName);
+  titleRight.push("Generated: " + fmtDate(today()));
+  doc.text(titleRight.join("   |   "), pageW - margin, y, { align:"right" });
+
+  y += 3;
+  doc.setDrawColor(15, 127, 136);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageW - margin, y);
+  y += 6;
+
+  /* ---- table geometry ---- */
+  const cols = ROSTER_COLUMNS;
+  const totalW = cols.reduce((s,c) => s + c.width, 0);
+  /* scale the grid to fit the printable width */
+  const availW = pageW - margin*2;
+  const scale = availW / totalW;
+  const colW = cols.map(c => c.width * scale);
+  const headH = 8;
+
+  /* Fit the whole roster on one A4 page when it stays legible: the row height
+     shrinks to use the page, down to 4 mm. A longer roster still pages over. */
+  const tableRows = records.length + (records.length ? 1 : 0);   /* + totals row */
+  const bodySpace = (pageH - margin - 8) - (y + headH);
+  const rowH = tableRows ? Math.max(4, Math.min(6.2, bodySpace / tableRows)) : 6.2;
+
+  /* ---- header row ---- */
+  const drawHead = () => {
+    doc.setFillColor(226, 243, 244);
+    doc.setDrawColor(160, 195, 197);
+    doc.setLineWidth(0.25);
+    doc.rect(margin, y, availW, headH, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(23, 58, 63);
+    let x = margin;
+    cols.forEach((c, i) => {
+      doc.text(c.title, x + colW[i]/2, y + headH/2 + 1.1, { align:"center" });
+      doc.setDrawColor(160, 195, 197);
+      doc.rect(x, y, colW[i], headH, "S");
+      x += colW[i];
+    });
+    y += headH;
+  };
+  drawHead();
+
+  /* ---- body rows ---- */
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(23, 58, 63);
+
+  const bodyRecords = rosterDisplayRecords(records);
+  bodyRecords.forEach((rec, ri) => {
+    /* page break — repeat the header on each page */
+    if(y + rowH > pageH - margin - 8){
+      doc.addPage();
+      y = margin;
+      drawHead();
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(23, 58, 63);
+    }
+    let x = margin;
+    cols.forEach((c, i) => {
+      const val = rosterDisplayValue(rec, c.key);
+      doc.setDrawColor(190, 215, 217);
+      doc.setLineWidth(0.2);
+      doc.rect(x, y, colW[i], rowH, "S");
+      if(val){
+        const opts2 = { align: c.align };
+        if(c.align === "left"){
+          opts2.maxWidth = colW[i] - 2;
+          doc.text(val, x + 1.2, y + rowH/2 + 1.1, opts2);
+        }else{
+          doc.text(val, x + colW[i]/2, y + rowH/2 + 1.1, opts2);
+        }
+      }
+      x += colW[i];
+    });
+    y += rowH;
+  });
+
+  /* ---- total block hours ---- */
+  if(records.length){
+    if(y + rowH > pageH - margin - 8){
+      doc.addPage();
+      y = margin;
+      drawHead();
+    }
+    const totalBlock = totalBlockHours(records);
+    const blockColW = colW[colW.length - 1];
+    const labelW = availW - blockColW;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(23, 58, 63);
+    doc.setFillColor(240, 248, 249);
+    doc.setDrawColor(160, 195, 197);
+    doc.setLineWidth(0.25);
+    doc.rect(margin, y, labelW, rowH, "FD");
+    doc.rect(margin + labelW, y, blockColW, rowH, "FD");
+    doc.text("Total Block Hours", margin + labelW - 2, y + rowH/2 + 1.1, { align:"right" });
+    doc.setFontSize(8);
+    doc.text(totalBlock, margin + labelW + blockColW/2, y + rowH/2 + 1.1, { align:"center" });
+    y += rowH;
+  }
+
+  /* ---- footer ---- */
+  const footY = pageH - margin + 2;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(95, 125, 128);
+  const pages = doc.getNumberOfPages();
+  for(let p = 1; p <= pages; p++){
+    doc.setPage(p);
+    doc.text("GBA Swap Check - " + countRosterDutyDays(records) + " duty day(s)", margin, footY);
+    doc.text("Page " + p + " of " + pages, pageW - margin, footY, { align:"right" });
+  }
+
+  const fname = "GBA-Roster-" + (o.crewName ? o.crewName.replace(/[^\w-]+/g,"-") : "roster") + "-" + today() + ".pdf";
+
+  /* Show the finished PDF on its own page instead of downloading it.
+     The click handler opens the tab while the click is still a user gesture,
+     so the popup blocker allows it; the file replaces the placeholder here.
+     Some browsers will not navigate a tab straight to a blob URL, so if the
+     navigation does not take the file is embedded in that same page instead. */
+  const blob = doc.output("blob");
+  const url = URL.createObjectURL(blob);
+
+  const showInline = (win) => {
+    win.document.open();
+    win.document.write(
+      '<!doctype html><html><head><meta charset="utf-8">' +
+      '<title>GBA Roster PDF</title>' +
+      '<style>html,body{margin:0;height:100%;background:#525659}' +
+      'embed{display:block;width:100%;height:100%;border:0}</style></head><body>' +
+      '<embed type="application/pdf" src="' + url + '">' +
+      '</body></html>'
+    );
+    win.document.close();
+  };
+
+  if(o.win){
+    let navigated = false;
+    try{
+      o.win.location.href = url;
+      await new Promise(r => setTimeout(r, 120));
+      navigated = o.win.location.href === url;
+    }catch(e){ /* the tab was closed */ }
+    if(!navigated){
+      try{ showInline(o.win); }
+      catch(e){ doc.save(fname); }   /* the tab was closed — save the file */
+    }
+    return fname;
+  }
+
+  const w = window.open(url, "_blank");
+  if(!w) doc.save(fname);            /* popup blocked — save the file instead */
+  return fname;
+}
+
+/* ============================================================
+   PDF IMPORT
+   ============================================================ */
+
+/* Several sector rows sharing a date are one duty day, exactly as the roster
+   sheet lays it out:
+     first row -> Duty Start (its STD - 65)
+     last row  -> Duty End (its STA + 30) and the total Duty Period
+     rows between -> duty columns left blank
+   The individual flight times (Dep Time, Arr Time, Block Hour) stay on every row.
+   Works on either extracted rows or roster records. */
+function combineDutyDays(rows){
+  const has = (r, k) => Object.prototype.hasOwnProperty.call(r, k);
+  const getDuty = (r) => String(has(r,"flight") ? r.flight : (r.duty || ""));
+  const isDO = (r) => /^DO(\s|$)/i.test(getDuty(r).trim());
+  const getS = (r) => has(r,"start") ? r.start : r.dutyStart;
+  const getE = (r) => has(r,"end") ? r.end : r.dutyEnd;
+  const setS = (r,v) => { if(has(r,"start")) r.start = v; else r.dutyStart = v; };
+  const setE = (r,v) => { if(has(r,"end")) r.end = v; else r.dutyEnd = v; };
+  const setP = (r,v) => { if(has(r,"period")) r.period = v; else r.dutyPeriod = v; };
+
+  let i = 0;
+  while(i < rows.length){
+    let j = i;
+    while(j + 1 < rows.length &&
+          !isDO(rows[i]) && !isDO(rows[j + 1]) &&
+          rows[j + 1].date && rows[j + 1].date === rows[i].date){
+      j++;
+    }
+    if(j > i){
+      const group = rows.slice(i, j + 1);
+      const startRow = group.find(r => getS(r));
+      const endRow = [...group].reverse().find(r => getE(r));
+      const start = startRow ? getS(startRow) : "";
+      const end = endRow ? getE(endRow) : "";
+      group.forEach(r => { setS(r, ""); setE(r, ""); setP(r, ""); });
+      setS(rows[i], start);
+      setE(rows[j], end);
+      if(start && end){
+        const mins = minutesApart(start, end);
+        if(mins !== null) setP(rows[j], rosterDuration(mins));
+      }
+    }
+    i = j + 1;
+  }
+  return rows;
+}
+
+async function runPdfImport(file){
+  ocrClearError();
+  document.getElementById("drop-zone").classList.add("busy");
+  ocrSetStatus("Loading the PDF reader…", 5);
+
+  try{
+    const pages = await readPdfPages(file, (msg, pct) => ocrSetStatus(msg, pct));
+
+    if(!pages.length) throw new Error("The PDF has no pages.");
+
+    const totalItems = pages.reduce((s,p) => s + p.items.length, 0);
+    if(!totalItems){
+      throw new Error("No text could be read from this PDF. It may be a scanned image rather than a text-based PDF.");
+    }
+
+    ocrSetStatus("Reconstructing the roster table…", 80);
+
+    /* collect the duty days from every page */
+    const all = [];
+    let headerFound = false;
+    for(const page of pages){
+      const res = rowsFromPdfPage(page);
+      if(res.headerFound) headerFound = true;
+      res.rows.forEach(r => all.push(r));
+    }
+
+    if(!all.length){
+      throw new Error(headerFound
+        ? "The roster table was found but no duty days could be read from it."
+        : "No roster table was found. The PDF needs a header row naming columns such as Date, Duty, Sector and Block Hour.");
+    }
+
+    /* carry the rows into the editor */
+    ocrRows = all.map(r => ({
+      date: r.date || "",
+      type: r.type || "Flight",
+      day: r.day || "",
+      duty: r.flight || "",
+      flight: r.flight || "",
+      sd: r.sd || "",
+      noDepArr: !!r.noDepArr,
+      standby: !!r.standby,
+      start: r.start || "",
+      end: r.end || "",
+      dep: r.dep || "",
+      arr: r.arr || "",
+      sector: r.sector || "",
+      period: r.period || "",
+      block: r.block || ""
+    }));
+
+    /* A row with no date of its own continues the duty day above it, which
+       is how a two-sector duty is laid out on the roster sheet. */
+    let lastDate = "";
+    for(let i = 0; i < ocrRows.length; i++){
+      if(ocrRows[i].date) lastDate = ocrRows[i].date;
+      else if(lastDate && ocrRows[i].flight) ocrRows[i].date = lastDate;
+      /* a row that only inherits its date still needs the weekday letter */
+      if(!ocrRows[i].day && ocrRows[i].date){
+        const d = new Date(ocrRows[i].date + "T00:00:00");
+        if(!isNaN(d)) ocrRows[i].day = "SMTWTFS"[d.getDay()];
+      }
+    }
+
+    document.getElementById("ocr-result-panel").classList.remove("hidden");
+    renderOcrRows();
+    refreshRosterPdfPanel();
+    ocrSetStatus("Done — " + ocrRows.length + " row(s) read from the PDF", 100);
+    toast(ocrRows.length + " row(s) read from the PDF");
+  }catch(err){
+    ocrShowError("Could not read the PDF: " + (err && err.message ? err.message : String(err)));
+  }finally{
+    document.getElementById("drop-zone").classList.remove("busy");
+    setTimeout(() => {
+      if(!document.getElementById("ocr-error").classList.contains("hidden")) return;
+      document.getElementById("ocr-progress").classList.add("hidden");
+    }, 1400);
+  }
+}
+
+/* ============================================================
+   ROSTER PREVIEW + PDF ACTIONS
+   ============================================================ */
+function currentRosterRecords(){
+  /* one sector per extracted row, then folded into the duty-day layout the
+     roster sheet uses (start on the first sector, end + total period on the last).
+     A row that has not been filled in yet is left out of the preview. */
+  const rows = ocrRows.filter(r => r.date || r.flight || r.sector || r.start || r.end || r.dep || r.arr);
+  return combineDutyDays(rows.map(ocrRowToRoster));
+}
+
+function renderRosterPreview(records){
+  const t = document.getElementById("roster-preview");
+  if(!records.length){
+    t.innerHTML = '<tbody><tr><td style="padding:18px;color:var(--muted)">No duty days to show yet.</td></tr></tbody>';
+    document.getElementById("roster-pdf-count").textContent = "";
+    return;
+  }
+  /* the preview always uses the Excel column names */
+  const head = "<thead><tr>" + ROSTER_COLUMNS.map(c =>
+    '<th class="'+(c.align==="center"?"c":"")+'">'+esc(c.title)+'</th>').join("") + "</tr></thead>";
+
+  const body = "<tbody>" + rosterDisplayRecords(records).map(r => {
+    return "<tr>" + ROSTER_COLUMNS.map(c => {
+      const val = rosterDisplayValue(r, c.key);
+      let cls = c.align === "center" ? "c" : "";
+      if(c.key === "duty"){
+        if(/^DO$/i.test(val)) cls += " do";
+        else if(/^STBY$/i.test(val)) cls += " stby";
+      }
+      if(c.key === "date" || c.key === "dutyStart" || c.key === "depTime" ||
+         c.key === "arrTime" || c.key === "dutyEnd" || c.key === "dutyPeriod" || c.key === "blockHour"){
+        cls += " mono";
+      }
+      return '<td class="'+cls+'">'+esc(val)+'</td>';
+    }).join("") + "</tr>";
+  }).join("") + "</tbody>";
+
+  /* total block hours along the bottom, under its own column */
+  const foot = '<tfoot><tr>' +
+    '<td colspan="' + (ROSTER_COLUMNS.length - 1) + '" class="total-label">Total Block Hours</td>' +
+    '<td class="c mono total-value">' + esc(totalBlockHours(records)) + '</td>' +
+    '</tr></tfoot>';
+
+  t.innerHTML = head + body + foot;
+  document.getElementById("roster-pdf-count").textContent = countRosterDutyDays(records) + " duty day(s)";
+}
+
+function refreshRosterPdfPanel(){
+  const recs = currentRosterRecords();
+  document.getElementById("roster-pdf-panel").classList.remove("hidden");
+  renderRosterPreview(recs);
+}
+
+document.getElementById("pdf-export").addEventListener("click", async () => {
+  const recs = currentRosterRecords();
+  if(!recs.length){ toast("No duty days to export"); return; }
+  const btn = document.getElementById("pdf-export");
+  btn.disabled = true;
+  btn.textContent = "Building PDF…";
+
+  /* Open the new page while the click still counts as a user gesture, so the
+     popup blocker lets it through. The PDF replaces the placeholder when ready. */
+  let win = null;
+  try{ win = window.open("about:blank", "_blank"); }catch(err){ win = null; }
+  if(win){
+    try{
+      win.document.title = "GBA Roster PDF";
+      win.document.body.innerHTML =
+        '<p style="font:14px system-ui,-apple-system,sans-serif;padding:28px;color:#333">' +
+        'Building the roster PDF…</p>';
+    }catch(err){ /* the new page cannot be reached yet; it is replaced below */ }
+  }
+
+  try{
+    const name = await exportRosterPdf(recs, {
+      crewName: document.getElementById("pdf-crew").value.trim(),
+      win
+    });
+    toast("Opened " + name);
+  }catch(err){
+    if(win){ try{ win.close(); }catch(e){} }
+    ocrShowError("Could not create the PDF: " + (err && err.message ? err.message : String(err)));
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Export Roster as PDF";
+  }
+});
+
+document.getElementById("pdf-csv").addEventListener("click", () => {
+  const recs = currentRosterRecords();
+  if(!recs.length){ toast("No duty days to export"); return; }
+
+  /* One CSV row per roster row, matching the preview: the date is printed once
+     per duty day, and the last row carries the total block hours. */
+  const cell = (v) => {
+    const s = String(v == null ? "" : v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [ROSTER_COLUMNS.map(c => cell(c.title)).join(",")];
+  rosterDisplayRecords(recs).forEach(r => {
+    lines.push(ROSTER_COLUMNS.map(c => cell(rosterDisplayValue(r, c.key))).join(","));
+  });
+  lines.push(ROSTER_COLUMNS.map((c, i) =>
+    i === 0 ? cell("Total Block Hours")
+      : (c.key === "blockHour" ? cell(totalBlockHours(recs)) : "")
+  ).join(","));
+
+  const crew = document.getElementById("pdf-crew").value.trim();
+  const fname = "GBA-Roster-" + (crew ? crew.replace(/[^\w-]+/g,"-") : "roster") + "-" + today() + ".csv";
+  const blob = new Blob(["\ufeff" + lines.join("\r\n") + "\r\n"], { type:"text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fname;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  toast("Exported " + fname);
+});
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+const dropZone = document.getElementById("drop-zone");
+const fileInput = document.getElementById("file-input");
+
+/* Roster import reads a text-based PDF only. */
+function handleFile(file){
+  if(!file) return;
+  const isPdf = /pdf$/i.test(file.name) || file.type === "application/pdf";
+  if(!isPdf){
+    toast("Roster import accepts PDF files only");
+    return;
+  }
+  runPdfImport(file);
+}
+
+document.getElementById("pick-file").addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => {
+  const f = fileInput.files && fileInput.files[0];
+  handleFile(f);
+  fileInput.value = "";
+});
+
+["dragenter","dragover"].forEach(ev => {
+  dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add("drag"); });
+});
+["dragleave","drop"].forEach(ev => {
+  dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove("drag"); });
+});
+dropZone.addEventListener("drop", e => {
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  handleFile(f);
+});
+
+document.getElementById("ocr-add-flight").addEventListener("click", () => {
+  ocrClearError();
+  addFlightRow();
+  toast("Flight duty added — fill in the date, flight number and times");
+});
+
+document.getElementById("ocr-clear").addEventListener("click", () => {
+  ocrRows = [];
+  ocrClearError();
+  document.getElementById("ocr-result-panel").classList.add("hidden");
+  document.getElementById("roster-pdf-panel").classList.add("hidden");
+  document.getElementById("ocr-rows").innerHTML = "";
+  document.getElementById("roster-preview").innerHTML = "";
+  document.getElementById("roster-pdf-count").textContent = "";
+  toast("Import cleared");
+});
+
+/* Send the extracted rows to one of the crew members in the swap request.
+   Crew A is the first crew member listed and Crew B the second. */
+/* The type of an imported row — the duty column decides it. */
+function rowDutyType(r){
+  const dutyVal = (r.flight || "").toUpperCase();
+  if(dutyVal === "DO" || dutyVal === "AL") return "DO";
+  if(dutyVal === "STBY") return "Standby";
+  if(r.type === "Standby" || r.standby) return "Standby";
+  return "Flight";
+}
+
+/* Group the extracted rows into duty days: consecutive rows that share a date
+   are the sectors of one duty day. */
+function groupRowsByDay(rows){
+  const days = [];
+  let cur = null;
+  (rows || []).forEach(r => {
+    if(!r.date && !r.start && !r.end) return;
+    if(cur && r.date && r.date === cur.date){
+      cur.rows.push(r);
+      return;
+    }
+    cur = { date: r.date, rows: [r] };
+    days.push(cur);
+  });
+  return days;
+}
+
+/* One duty day card from the sectors of that day: the duty start is the first
+   sector's, the duty end the last sector's, and the block hours are the sum
+   of the sectors. */
+function combineDay(day){
+  const rows = day.rows;
+  const first = rows[0];
+  const last = rows[rows.length - 1];
+  let mins = 0;
+  rows.forEach(r => {
+    const m = hmToMin(normaliseDuration(r.block || ""));
+    if(m !== null) mins += m;
+  });
+  return {
+    date: day.date,
+    type: rowDutyType(first),
+    start: first.start || "",
+    end: last.end || "",
+    block: mins ? (mins/60).toFixed(2) : "",
+    flight: rows.map(r => r.flight || "").filter(Boolean).join(" → "),
+    sector: rows.map(r => r.sector || "").filter(Boolean).join(" → ")
+  };
+}
+
+function addRowsToCrew(crewIndex, crewLabel){
+  const parties = document.querySelectorAll("#parties .party");
+  const crewEl = parties[crewIndex];
+  if(!crewEl){
+    toast(crewIndex === 0
+      ? "Add a crew member to the swap check first"
+      : "Add a second crew member to the swap check first");
+    return;
+  }
+
+  /* remove the empty placeholder duty day */
+  const existing = crewEl.querySelectorAll(".duty-day");
+  if(existing.length === 1 && !existing[0].querySelector(".d-date").value){
+    existing[0].remove();
+  }
+
+  /* The duty days of a swap request are days, not sectors: several flights on
+     the same date are one duty day, so they share one card. */
+  let added = 0;
+  groupRowsByDay(ocrRows).forEach(day => {
+    const duty = combineDay(day);
+    if(!duty.date && !duty.start && !duty.end) return;
+    addDutyDay(crewEl, duty);
+    added++;
+  });
+
+  updateSummary();
+  updateSelCount(crewEl);
+  toast(added + " duty day(s) added to " + crewLabel);
+  /* jump to the check view so the user can run the check */
+  document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll("section.view").forEach(s => s.classList.remove("active"));
+  document.querySelector('nav button[data-view="check"]').classList.add("active");
+  document.getElementById("view-check").classList.add("active");
+}
+
+document.getElementById("ocr-apply-a").addEventListener("click", () => {
+  addRowsToCrew(0, "Crew A");
+});
+
+document.getElementById("ocr-apply-b").addEventListener("click", () => {
+  addRowsToCrew(1, "Crew B");
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+/* the page starts with a Crew A and a Crew B slot */
+addCrew();
+addCrew();
+renderRules();
+renderRecords();
+updateHint();
+updateSummary();
+</script>
+</body>
+</html>

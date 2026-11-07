@@ -1,0 +1,337 @@
+# GBA Swap Check
+
+Offline-first PWA for validating crew shift and duty swap requests against GBA roster rules.
+
+## Features
+
+- **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
+- **Roster Import** — upload a roster PDF and read it in the browser. Duty days are extracted as editable rows, then added to a swap request in one click. The file is never uploaded to a server.
+- **Rules** - all 27 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
+- **Records** - every check is saved with its result and findings; filter by result, search, load back into the form, delete, or export to CSV.
+
+## Roster import
+
+The **Roster Import** tab takes a roster PDF. Everything is read locally in the
+browser — nothing is sent to a server.
+
+### PDF roster (recommended)
+
+A text-based PDF (exported from Excel or another app) is read with pdf.js:
+
+- The text and its position are pulled from every page.
+- Text items are grouped into printed rows by their vertical position.
+- The header row is found by matching column names.
+- Every printed heading becomes a column, including ones the sheet does not use
+  ("S NO", "REMARK"), so those still take up their slot. A heading repeated side by
+  side — the GBA roster prints `STD STD` and `STA STA`, local time first and UTC
+  second — is kept as its own column but ignored.
+- The data is clustered by its left edges to work out where each column actually
+  starts and ends. Headings are then aligned to those clusters by centre position
+  with a sequence alignment, so a column with no data at all (an empty "SD")
+  is skipped instead of pulling the columns after it one place to the left.
+- Every cell is placed in the column it belongs in, so multi-word values ("HB 880",
+  "HKG CTS") stay together.
+- Page footers (`PRINTED BY`, `TOTAL BLOCK TIME`) and other text outside the table
+  are ignored.
+
+The GBA roster this is built for has these columns:
+
+| S NO | DATE OF DUTY | TYPE OF DUTY | Flight No | STD | STD (UTC) | FROM | TO | STA | STA (UTC) | BLOCK | REMARK |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+
+- The first `STD` / `STA` are local times and are the ones used. The second pair is
+  UTC and is ignored.
+- `TYPE OF DUTY` carries the duty code: `OP - (FA4)` for a flight, `STB - H04` for
+  standby, `OTH - A` / `OTH - GD` for other duties, and `DO` / `AL` for a day off or
+  leave.
+- `S NO` and `REMARK` are ignored.
+
+If the PDF has no text layer (a scan), the reader says so — the PDF must contain
+selectable text.
+
+#### Column mapping
+
+Both the PDF roster headings and the Excel sheet headings are recognised, and the
+roster fields are filled from them like this:
+
+| Roster field | PDF column | Excel column |
+|---|---|---|
+| Date | DATE OF DUTY | Date |
+| Duty | Flight No (flight) or the code in TYPE OF DUTY (`STB - H04` → `H04`) | Duty |
+| Sector | FROM + TO | Sector |
+| Dep Time | STD (local) | Dep Time |
+| Arr Time | STA (local) | Arr Time |
+| Duty Start | *derived*: Dep Time − 65 min | Duty Start |
+| Duty End | *derived*: Arr Time + 30 min | Duty End |
+| Duty Period | *derived*: Duty Start to Duty End | Duty Period |
+| Block Hour | BLOCK | Block Hour |
+
+- The mapping is the rule, so it is applied even if the uploaded PDF happens to print its
+  own Duty Start, Duty End or Duty Period. A printed value is used only when the row has no
+  STD or STA to derive from (for example a ground duty with no flight times).
+- Duty Period is the total time from Duty Start to Duty End.
+- Block Hour is read from the sheet. It is a local-time figure that accounts for the
+  time-zone difference between the stations, so it cannot be derived from STD and STA.
+- A Flight No is recognised by its shape (`HB702`, `HB 2352`) and is written with a space
+  as the sheet shows (`HB 880`). A standby or other duty code (`H04`, `H14`, `A`, `GD`) is
+  not a flight number.
+- Standby (`STB - H04`) fills Duty Start from STD and Duty End from STA, with no Dep Time,
+  Arr Time or Block Hour. `DO` and `AL` leave every time blank. A standby is added to the swap
+  request as a **Standby** duty, so the standby rules apply to it.
+- A two-sector duty day is one duty: Duty Start on the first sector row, Duty End and the
+  total Duty Period on the last row, with the duty cells in between left blank.
+- Whatever headings the uploaded PDF uses, the imported roster is always shown in the
+  **Excel format**. If the PDF does not print the weekday, Day is taken from the date.
+  SD is kept in the Rows editor but is not shown in the preview or the PDF.
+
+The **Rows** table above the preview keeps its SD column, so a correction made there flows
+straight into the preview and the exported PDF. Times are entered as four digits (`0810`) and
+are stored as `08:10`; changing a time recalculates the Duty Start, Duty End and Duty Period
+it feeds.
+
+#### Adding a flight duty
+
+**Add Flight Duty** adds a blank flight to the **Extracted Duty Days** table, for a duty that
+the PDF missed. Fill in the date, the flight number and the departure and arrival times, and
+the rest follows the same mapping as an imported row:
+
+- **Duty Start** = Dep Time − 65 min, **Duty End** = Arr Time + 30 min
+- **Duty Period** = Duty Start to Duty End, **Block Hour** = Dep Time to Arr Time
+
+The weekday is filled in from the date, and the row moves into date order once the date is
+picked, so it sits with the rest of the roster. Adding a second flight on a date already in
+the roster makes a two-sector duty day, which is shown as one duty: Duty Start on the first
+sector, Duty End and the total Duty Period on the last.
+
+#### Amending a time by hand
+
+Changing the **Dep Time** or the **Arr Time** of a row moves the fields that follow from it:
+
+| Field | Follows |
+|---|---|
+| Duty End | Arr Time + 30 min |
+| Duty Period | Duty Start to Duty End |
+| Block Hour | Dep Time to Arr Time |
+
+The **Duty Start** is the crew's report time and is left where it is, so amending a flight
+time never moves it. The exception is a row added by hand with **Add Flight Duty**: its Duty
+Start was worked out from the Dep Time, so it follows the Dep Time until a start is typed.
+
+A **Duty End** or **Block Hour** typed by hand is kept as it is typed, and is not overwritten
+when a flight time is amended. A row whose block hour was printed by the roster keeps that
+figure until one of its flight times is amended.
+
+#### Exporting
+
+The **Roster Preview & PDF** panel builds the roster as a PDF. The preview table and the
+generated file both use the **Excel format** headings — Date, Day, Duty, Sector, Duty Start,
+Dep Time, Arr Time, Duty End, Duty Period, Block Hour — matching the roster worksheet.
+There is no other heading style; an uploaded PDF is relabelled into this layout.
+
+What the preview shows is exactly what the PDF contains. **Export Roster as PDF** opens the
+file in a new page, where it can be viewed, printed or saved. If the popup is blocked the
+file is downloaded instead. Set the crew name first; the filename is
+`GBA-Roster-<crew>-<date>.pdf`. The PDF is A4 portrait and fits the whole roster on
+one page whenever it stays legible (row height shrinks down to 4 mm); a longer roster
+pages over normally.
+
+### Editing and clearing rows
+
+Every extracted row is shown in an editable table before it is applied, so a reading
+mistake is easy to fix. **Clear** empties the import. **Add Flight Duty** adds a duty the
+PDF did not contain. Amending a flight time updates the Duty End, Duty Period and Block Hour
+that follow from it — see [Amending a time by hand](#amending-a-time-by-hand).
+
+When the rows are applied to a swap request, the roster's block hours (`1:40`) are carried
+across as decimal hours (`1.67`), which is the unit the Block Hours field and the block-hour
+rules use.
+
+### Sending the rows to a crew member
+
+**Add to Swap Check (Crew A)** and **Add to Swap Check (Crew B)** send the extracted rows to
+the first and the second crew member listed in the swap request. Crew A is the one at the top
+of the list, Crew B the one below it. Crew B needs a second crew member to exist — otherwise
+it says so and nothing is added.
+
+The same roster is normally sent to both crew members, since a swap covers both of them, so
+the extracted rows stay in the import after they have been added and can be sent again.
+
+## The Swap Check page
+
+The page holds one panel: **Crew Members & Duty Days**. It starts with two crew slots side by
+side as columns — **Crew A** on the left and **Crew B** on the right — so the Roster Import
+buttons "Add to Swap Check (Crew A)" and "Add to Swap Check (Crew B)" always have somewhere to
+go. On a narrow screen the two columns stack. The header shows how many crew members and duty
+days are in the request, and the actions under the crew cards are **Run Swap Check** and
+**Clear**. Each crew member card lists the duty days in the request, and has its own
+**+ Duty Day** button for adding one by hand.
+
+Each duty day is shown the way the crew roster app lists it: the weekday and the day of the
+month in a narrow column on the left (`SUN` over `8`), and the duty itself in a card beside it —
+**Duty**, **Sector**, **Duty Start** and **Duty End**. Click the day number to change the date.
+A second sector on the same day gets its own row with the same date.
+
+There is no duty type column: the type follows the duty code — `DO` and `AL` are days off, a
+standby code (`H04`, `H14`) is a standby and anything else is a flight. The time labels follow
+the type ("Standby Start", "DO Starts").
+
+Only a flight shows its full card. The fields a duty does not have are hidden and cleared, the
+way the crew roster app lists them:
+
+| Duty code | Card shows |
+|---|---|
+| `HB 702` (flight) | Duty, Sector, Duty Start, Duty End |
+| `H04`, `H14` (standby) | Duty, Standby Start, Standby End |
+| `A`, `GD` (other ground duty) | Duty, Duty Start, Duty End |
+| `DO`, `AL` (day off or leave) | Duty |
+
+A day off or leave shows only its duty code, so its duty field stays narrow while the card
+itself keeps the same size as the others. Every row is the same height, so the date column
+lines up all the way down the card, and the remove button sits at the right of every card.
+Changing the duty code re-fits the row straight away.
+
+### Choosing the duty days to check
+
+Each duty card has a tick in front of it. **Only the ticked duty days are checked** — the
+rules are applied to those days alone, so a swap that covers one or two days is not judged
+against the whole roster. Unticked days stay on the form, dimmed, and are left out of the
+swap check. The tick is on by default, and the header of each crew member shows how many days
+are ticked with a button to **Select all** or **Clear** them. The selection is saved with the
+record and restored when it is loaded back into the form.
+
+The header of the panel shows the totals, for example *"2 crew member(s) · 60 duty day(s) ·
+32 selected"*, and the verdict repeats how many days were checked.
+
+Several flights on the same date are **one duty day**, so they share a single card: the duty
+and sector carry the whole chain (`HB 702 → HB 703`, `HKG TPE → TPE HKG`), the Duty Start is
+the first sector's and the Duty End the last sector's, and the block hours are the sum of the
+sectors. A day with more than one sector gives its duty and sector a line of their own so the
+whole chain stays readable. The individual sectors are still edited separately in the Roster
+Import.
+
+There is no block hours column either. The block hour still comes from the roster's printed
+BLOCK column and is kept on the duty, so the block-hour rules and the swap-out minimum are
+assessed as before; a duty added by hand gets one worked out from its own times (Duty Start is
+65 min before departure and Duty End 30 min after arrival). Change the block in the Roster
+Import, where it is still shown in the preview and the exported PDF.
+
+A slot only counts as a crew member once it is named or has at least one dated duty day, so
+an empty slot does not satisfy the "at least two crew members" rule.
+
+The **Preceding Duty Days** section has been removed, so the rest-period and rolling hour-limit
+rules are assessed on the duty days in the request alone — the app no longer takes the days
+worked before the request. The rules themselves are unchanged and still listed in the Rules tab.
+
+The request details - Requester Name, Position, Base and Reason - are no longer asked for.
+The requester is taken from the first crew member listed, and the Rule "Reason Mandatory"
+has been removed along with them. Position, Base and Reason on older saved records are kept
+and still shown in the Records tab.
+
+## The Records tab
+
+Every swap check is saved with who it was for, when it was run, the outcome and the findings.
+Each record card shows the requester and the result on the left, the crew member and duty
+day count and the timestamp on the right, the findings as a short list, and the duty days of
+each crew member as tags. Long lists are cut short — three findings and six duty days, with
+the remainder shown as *"more"* — so a card stays readable.
+
+The toolbar filters by result (all / approved / rejected) and searches across the requester,
+the crew names and the recorded details. The count beside it shows how many records match.
+**Load into form** puts a saved record back on the Swap Check page, and **Export CSV** writes
+every record out.
+
+## Saving the roster as PDF
+
+The **Roster Preview & PDF** panel reproduces the GBA roster layout and exports it with
+jsPDF:
+
+| Date | Day | Duty | Sector | Duty Start | Dep Time | Arr Time | Duty End | Duty Period | Block Hour |
+|---|---|---|---|---|---|---|---|---|---|---|
+
+- Dates are written `01-Nov-26` and times `0810L`, matching the roster sheet; durations are
+  shown as `7:20`.
+- **Total Block Hours** is shown in the last row of both the preview and the exported PDF:
+  the Block Hour column is added up and printed in its own column. Non-flight duties have
+  no block, so they do not change the total.
+- The **duty day count** (beside the panel title and in the PDF footer) leaves out `DO` and
+  `AL`, and counts several flights on the same date as one duty day.
+- When a duty day has more than one flight, the date is printed on the first row only and
+  the next rows of the same date leave it blank, as the roster sheet does.
+- **Export Roster as PDF** opens the file in a new page (a download if the popup is
+  blocked). Set the crew name first; the filename is `GBA-Roster-<crew>-<date>.pdf` and the
+  page is A4 portrait, holding the whole roster on one sheet when it fits legibly.
+- **Export Roster as CSV** downloads the same table as `GBA-Roster-<crew>-<date>.csv` — one
+  row per roster row (the date on the first flight of each duty day), with a final
+  `Total Block Hours` row. The file opens directly in Excel.
+- The header row repeats on every page and each page is numbered.
+
+## Duty day types
+
+| Type | Fields used |
+|---|---|
+| **Flight** | date, report/start, end, block hours, flight no. |
+| **Standby** | date, standby start, standby end |
+| **DO** (day off) | date, DO start, DO end |
+
+A DO that is shorter than the 34-hour minimum automatically rolls its end time forward
+until it spans the required local nights, so a 22:00 → 08:00 DO is treated as a valid
+2-night day off.
+
+## Rules applied
+
+**1. Number of Duty Days in a Swap Request**
+- Maximum 10 consecutive duty days, or 5 individual (non-consecutive) duty days.
+- If any individual duty swap is not approved, all other swaps are also rejected.
+
+**2. Swap Limitations**
+- If total block hours on roster stage or after swapping is below 50 hours, swapping-out
+  block hours is not allowed — except DO-to-DO swaps, duty swaps with the same block hours,
+  and swap-in duty with higher block hours.
+
+**3. Day Off (DO) and Standby Duty**
+- A single DO must include 2 local nights and be at least 34 hours. A local night is 8
+  hours falling between 2200 and 0800 local time. An additional consecutive DO must be at
+  least 24 hours.
+- A DO cannot be followed by duty earlier than 0600.
+- Duty end time is 30 minutes after STA / ATA or end of standby duty period.
+- Any swap resulting in a duty end beyond 2330L before a DO is not approved.
+- A crewmember shall not be on duty more than 6 consecutive days; duty end on the 6th duty
+  day is 2100L.
+- Following 2 consecutive DO, the latest duty end on the 12th day is 1830L, followed by DO
+  on the 13th and 14th day.
+- Standby starting from/after 1100L cannot be followed by a DO.
+- The duty day after standby starting 1100L cannot be swapped for duty with check-in earlier
+  than 1200L; after standby starting 1200L or onwards, earlier than 1500L.
+- D2 and D3 following standby H10 on D1 can only be Flight / Standby duties — not DO,
+  training, SNY, GD or company-assigned special duty.
+- PRC crew swapping in DYG / CKG / ENH flight or standby duties may not be accommodated;
+  swap quota is not deducted.
+
+**4. Rest Period**
+- Rest commences 30 minutes after actual time of arrival (ATA).
+- Minimum rest is 12 hours, or as long as the preceding duty period, whichever is greater.
+
+**5. Duty Hour Limitations**
+- Not more than 60 hours in any 7 consecutive days, 105 hours in any 14 consecutive days,
+  or 210 hours in any 28 consecutive days.
+
+**6. Maximum Number of Consecutive Days Off**
+- Maximum 4 consecutive DO.
+
+## Running
+
+Open `index.html` directly in a browser, or serve the folder:
+
+```
+npx serve "C:\Users\aysha\Documents\GBA Swap Check"
+```
+
+For installable PWA behaviour (service worker, offline cache) serve over `http://localhost`
+rather than `file://`.
+
+## Data
+
+All data stays local in `localStorage` under `gbaswapcheck.v2` (records) and
+`gbaswapcheck.rules.v2` (rule settings). Nothing is transmitted anywhere.
+
+Use **Records → Export CSV** for a backup.
