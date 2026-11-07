@@ -2,6 +2,9 @@
 
 Offline-first PWA for validating crew shift and duty swap requests against GBA roster rules.
 
+**Live app:** https://ayshalau.github.io/gba-swap-check/
+**Source:** https://github.com/ayshalau/gba-swap-check
+
 ## Features
 
 - **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
