@@ -3345,6 +3345,16 @@ renderRules();
 renderRecords();
 updateHint();
 updateSummary();
+
+/* ============================================================
+   OFFLINE
+   ============================================================ */
+/* Cache the app so it keeps working without a network. */
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
