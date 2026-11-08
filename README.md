@@ -85,10 +85,11 @@ roster fields are filled from them like this:
   total Duty Period on the last row, with the duty cells in between left blank.
 - Whatever headings the uploaded PDF uses, the imported roster is always shown in the
   **Excel format**. If the PDF does not print the weekday, Day is taken from the date.
-  SD is kept in the Rows editor but is not shown in the preview or the PDF.
+  Day and SD carry no extra meaning in a swap check, so neither is shown in the
+  **Extracted Duty Days** editor; both are still read from the PDF and kept in the data.
 
-The **Rows** table above the preview keeps its SD column, so a correction made there flows
-straight into the preview and the exported PDF. Times are entered as four digits (`0810`) and
+The **Extracted Duty Days** rows show Date, Duty, Sector, Duty Start, Dep Time, Arr Time,
+Duty End, Duty Period and Block Hour. Times are entered as four digits (`0810`) and
 are stored as `08:10`; changing a time recalculates the Duty Start, Duty End and Duty Period
 it feeds.
 

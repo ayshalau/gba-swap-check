@@ -278,10 +278,11 @@
   .ocr-progress .fill{height:100%;width:0;background:var(--accent);transition:width .25s}
   .ocr-error{margin-top:16px;border:1px solid var(--danger);background:rgba(179,56,43,.08);color:var(--danger);border-radius:10px;padding:12px 14px;font-size:14px}
 
-  /* the editable rows use the same 12 columns as the roster sheet */
+  /* the editable rows: date, duty, sector and the six time/block figures.
+     Day is derived from the date and SD is kept from the PDF, neither is shown */
   .ocr-row-head,.ocr-row{
     display:grid;
-    grid-template-columns:128px 42px 92px 46px 108px 84px 84px 84px 84px 82px 82px 34px;
+    grid-template-columns:128px 92px 108px 84px 84px 84px 84px 82px 82px 34px;
     gap:6px;align-items:center;margin-bottom:8px;
   }
   /* each field carries its name, shown only when the row stacks */
@@ -504,7 +505,7 @@
       </div>
 
       <div class="ocr-row-head">
-        <span>Date</span><span>Day</span><span>Duty</span><span>SD</span><span>Sector</span>
+        <span>Date</span><span>Duty</span><span>Sector</span>
         <span>Duty Start</span><span>Dep Time</span><span>Arr Time</span><span>Duty End</span>
         <span>Duty Period</span><span>Block Hour</span><span></span>
       </div>
@@ -2451,9 +2452,7 @@ function renderOcrRows(){
     main.className = "ocr-row";
     main.innerHTML =
       '<label class="f"><span class="cap">Date</span><input type="date" class="o-date" value="'+esc(r.date||"")+'"></label>' +
-      '<label class="f"><span class="cap">Day</span><input type="text" class="o-day" placeholder="S" maxlength="3" value="'+esc(r.day||"")+'"></label>' +
       '<label class="f"><span class="cap">Duty</span><input type="text" class="o-flight" placeholder="Duty" value="'+esc(r.flight||"")+'"></label>' +
-      '<label class="f"><span class="cap">SD</span><input type="text" class="o-sd" placeholder="SD" value="'+esc(r.sd||"")+'"></label>' +
       '<label class="f"><span class="cap">Sector</span><input type="text" class="o-sector" placeholder="Sector" value="'+esc(r.sector||"")+'"></label>' +
       '<label class="f"><span class="cap">Duty Start</span><input type="text" inputmode="numeric" maxlength="5" class="o-start" placeholder="HHMM" value="'+esc(hmToDigits(r.start))+'"></label>' +
       '<label class="f"><span class="cap">Dep Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-dep" placeholder="HHMM" value="'+esc(hmToDigits(r.dep))+'"></label>' +
@@ -2492,17 +2491,14 @@ function renderOcrRows(){
         renderRosterPreview(currentRosterRecords());
       });
     };
-    ["date","day","flight","sd","sector","start","dep","arr","end","period","block"]
+    ["date","flight","sector","start","dep","arr","end","period","block"]
       .forEach(k => bind(main, k, "o-" + k));
 
     /* picking a date sets the weekday and puts the row back in date order */
     main.querySelector(".o-date").addEventListener("change", () => {
       if(r.date){
         const d = dayLetter(r.date);
-        if(d && r.day !== d){
-          r.day = d;
-          main.querySelector(".o-day").value = d;
-        }
+        if(d && r.day !== d) r.day = d;
       }
       sortOcrRowsByDate();
       renderOcrRows();
