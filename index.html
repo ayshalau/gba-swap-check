@@ -370,12 +370,34 @@
   @media (max-width:900px){
     /* the two crew members stack */
     #parties{grid-template-columns:1fr}
-    /* the roster rows become a labelled form instead of a wide table */
+    /* the roster rows become a labelled form instead of a wide table; the
+       date, duty and sector get the full width, the figures pair underneath */
     .ocr-row-head{display:none}
     .ocr-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}
+    .ocr-row .f-date,
+    .ocr-row .f-duty,
+    .ocr-row .f-sector{grid-column:1/-1}
     .ocr-row .cap{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+    .ocr-row input,.ocr-row select{font-size:16px;min-height:42px;min-width:0}
     .ocr-row-wrap{position:relative;padding:12px 12px 12px 44px}
-    .ocr-row .row-del{position:absolute;top:10px;left:8px}
+    .ocr-row .row-del{position:absolute;top:4px;left:2px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;padding:0;font-size:20px}
+    /* a field that cannot apply to the duty type is hidden, so a day off is a
+       short row instead of seven empty boxes */
+    .ocr-row[data-kind="off"] .f-sector,
+    .ocr-row[data-kind="off"] .f-start,
+    .ocr-row[data-kind="off"] .f-end,
+    .ocr-row[data-kind="off"] .f-dep,
+    .ocr-row[data-kind="off"] .f-arr,
+    .ocr-row[data-kind="off"] .f-period,
+    .ocr-row[data-kind="off"] .f-block,
+    .ocr-row[data-kind="standby"] .f-sector,
+    .ocr-row[data-kind="standby"] .f-dep,
+    .ocr-row[data-kind="standby"] .f-arr,
+    .ocr-row[data-kind="standby"] .f-block,
+    .ocr-row[data-kind="other"] .f-sector,
+    .ocr-row[data-kind="other"] .f-dep,
+    .ocr-row[data-kind="other"] .f-arr,
+    .ocr-row[data-kind="other"] .f-block{display:none}
     /* the crew card header stacks */
     .party-head{flex-direction:column;align-items:stretch}
     .party-head .c-name{width:100%}
@@ -385,10 +407,34 @@
     /* the records list stacks the crew name above the duty days */
     .rec-crew{flex-direction:column;gap:4px}
     .rec-crew-name{flex:0 0 auto}
+    /* 16px fields stop iOS from zooming the page on focus, and 44px is a
+       comfortable tap target */
+    input,select,textarea{font-size:16px}
+    .duty-card input,.duty-card select,
+    .party-head .c-name,
+    .rule-card .rule-line .val input,
+    #filter-text,#filter-result,
+    label.field input,label.field select,label.field textarea{font-size:16px}
+    .party-head .c-name,#filter-text,#filter-result{min-height:42px}
+    .rule-card .rule-line .val input{min-height:38px;width:130px}
+    .btn{min-height:44px}
+    .btn-sm{min-height:40px}
+    .btn-mini{min-height:36px}
+    nav button{min-height:44px}
+    .duty-card input,.duty-card select{height:42px}
   }
   @media (min-width:561px) and (max-width:900px){
     /* a tablet has room for three fields across */
     .ocr-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .ocr-row .f-date{grid-column:1/-1}
+    .ocr-row .f-duty{grid-column:span 2}
+    .ocr-row .f-sector{grid-column:span 1}
+    /* a date field does not need the whole tablet width */
+    .ocr-row .o-date{max-width:260px}
+    /* when the sector is hidden, the duty takes the whole line */
+    .ocr-row[data-kind="off"] .f-duty,
+    .ocr-row[data-kind="standby"] .f-duty,
+    .ocr-row[data-kind="other"] .f-duty{grid-column:1/-1}
   }
   @media (max-width:768px){
     .grid-3{grid-template-columns:1fr 1fr}
@@ -406,23 +452,48 @@
   }
   @media (max-width:560px){
     .grid-3{grid-template-columns:1fr}
-    .duty-card label{flex:1 1 140px}
-    /* the date becomes a strip above the card */
+    /* the card is a two-column grid: duty and sector take a line each, the
+       figures pair up, and the remove button sits in the date strip */
+    .duty-card{grid-area:card;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+    .duty-card label{flex:none;min-width:0}
+    .duty-card .f-duty,
+    .duty-card .f-sector{grid-column:1/-1}
+    .duty-day.compact .duty-card{grid-template-columns:1fr}
+    /* the date becomes a strip above the card, with the remove button at its
+       right end so it no longer takes a line of its own */
     .duty-day{
-      display:grid;grid-template-columns:16px 1fr;
-      grid-template-areas:"tick date" "card card";gap:8px;
+      position:relative;display:grid;grid-template-columns:40px 1fr;
+      grid-template-areas:"tick date" "card card";gap:8px 8px;
     }
-    .duty-check{grid-area:tick}
+    .duty-check{grid-area:tick;justify-content:center}
+    .duty-check input{width:22px;height:22px}
     .duty-date{
-      grid-area:date;flex-direction:row;justify-content:flex-start;align-items:baseline;
-      gap:8px;padding:6px 10px;
+      grid-area:date;flex-direction:row;justify-content:flex-start;align-items:center;
+      gap:8px;padding:6px 46px 6px 10px;min-height:44px;
     }
-    .duty-card{grid-area:card}
+    .duty-card .row-del{
+      position:absolute;top:0;right:0;width:44px;height:44px;
+      display:flex;align-items:center;justify-content:center;padding:0;
+      font-size:22px;border-radius:10px;
+    }
+    /* the small screens get the roster editor, not a paragraph of instructions */
+    .row-head .hint{display:none}
+    /* a smaller drop zone leaves more room for the rows below it */
+    .drop-zone{padding:20px 14px}
+    .dz-icon{font-size:24px;margin-bottom:4px}
+    .dz-main{font-size:15px}
+    .dz-hint{font-size:11px;margin-top:8px}
+    .ocr-row-wrap{padding-top:14px}
     .brand-logo{width:52px;height:37px}
     .logotype{font-size:19px}
     .brand-sub{font-size:11px;letter-spacing:.1em}
     .panel{padding:14px}
     .toast{max-width:calc(100% - 24px)}
+  }
+  @media (max-width:400px){
+    /* keep all four tabs on one line instead of scrolling a clipped word */
+    nav button{padding:10px 9px 12px;font-size:12px}
+    .brand-sub{letter-spacing:.08em}
   }
 </style>
 </head>
@@ -506,7 +577,7 @@
 
       <div class="ocr-row-head">
         <span>Date</span><span>Duty</span><span>Sector</span>
-        <span>Duty Start</span><span>Dep Time</span><span>Arr Time</span><span>Duty End</span>
+        <span>Duty Start</span><span>Duty End</span><span>Dep Time</span><span>Arr Time</span>
         <span>Duty Period</span><span>Block Hour</span><span></span>
       </div>
       <div id="ocr-rows"></div>
@@ -2451,16 +2522,19 @@ function renderOcrRows(){
     const main = document.createElement("div");
     main.className = "ocr-row";
     main.innerHTML =
-      '<label class="f"><span class="cap">Date</span><input type="date" class="o-date" value="'+esc(r.date||"")+'"></label>' +
-      '<label class="f"><span class="cap">Duty</span><input type="text" class="o-flight" placeholder="Duty" value="'+esc(r.flight||"")+'"></label>' +
-      '<label class="f"><span class="cap">Sector</span><input type="text" class="o-sector" placeholder="Sector" value="'+esc(r.sector||"")+'"></label>' +
-      '<label class="f"><span class="cap">Duty Start</span><input type="text" inputmode="numeric" maxlength="5" class="o-start" placeholder="HHMM" value="'+esc(hmToDigits(r.start))+'"></label>' +
-      '<label class="f"><span class="cap">Dep Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-dep" placeholder="HHMM" value="'+esc(hmToDigits(r.dep))+'"></label>' +
-      '<label class="f"><span class="cap">Arr Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-arr" placeholder="HHMM" value="'+esc(hmToDigits(r.arr))+'"></label>' +
-      '<label class="f"><span class="cap">Duty End</span><input type="text" inputmode="numeric" maxlength="5" class="o-end" placeholder="HHMM" value="'+esc(hmToDigits(r.end))+'"></label>' +
-      '<label class="f"><span class="cap">Duty Period</span><input type="text" class="o-period" placeholder="h:mm" value="'+esc(r.period||"")+'"></label>' +
-      '<label class="f"><span class="cap">Block Hour</span><input type="text" class="o-block" placeholder="h:mm" value="'+esc(r.block||"")+'"></label>' +
+      '<label class="f f-date"><span class="cap">Date</span><input type="date" class="o-date" value="'+esc(r.date||"")+'"></label>' +
+      '<label class="f f-duty"><span class="cap">Duty</span><input type="text" class="o-flight" placeholder="Duty" value="'+esc(r.flight||"")+'"></label>' +
+      '<label class="f f-sector"><span class="cap">Sector</span><input type="text" class="o-sector" placeholder="Sector" value="'+esc(r.sector||"")+'"></label>' +
+      '<label class="f f-start"><span class="cap">Duty Start</span><input type="text" inputmode="numeric" maxlength="5" class="o-start" placeholder="HHMM" value="'+esc(hmToDigits(r.start))+'"></label>' +
+      '<label class="f f-end"><span class="cap">Duty End</span><input type="text" inputmode="numeric" maxlength="5" class="o-end" placeholder="HHMM" value="'+esc(hmToDigits(r.end))+'"></label>' +
+      '<label class="f f-dep"><span class="cap">Dep Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-dep" placeholder="HHMM" value="'+esc(hmToDigits(r.dep))+'"></label>' +
+      '<label class="f f-arr"><span class="cap">Arr Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-arr" placeholder="HHMM" value="'+esc(hmToDigits(r.arr))+'"></label>' +
+      '<label class="f f-period"><span class="cap">Duty Period</span><input type="text" class="o-period" placeholder="h:mm" value="'+esc(r.period||"")+'"></label>' +
+      '<label class="f f-block"><span class="cap">Block Hour</span><input type="text" class="o-block" placeholder="h:mm" value="'+esc(r.block||"")+'"></label>' +
       '<button class="row-del" title="Remove row" aria-label="Remove row">×</button>';
+
+    /* the duty code decides which fields can apply, which the narrow layout uses */
+    main.dataset.kind = dutyKindFromCode(r.flight || "");
 
     /* flag rows the reader could not read confidently */
     if(!r.date) main.querySelector(".o-date").classList.add("low");
@@ -2481,6 +2555,8 @@ function renderOcrRows(){
       const evt = (field.tagName === "SELECT") ? "change" : "input";
       field.addEventListener(evt, () => {
         r[key] = field.value;
+        /* the duty code decides which fields the narrow layout shows */
+        if(key === "flight") main.dataset.kind = dutyKindFromCode(r.flight);
         /* a duty start or block hour typed by hand is kept as it is typed */
         if(key === "block") r.blockFollowsTimes = false;
         if(key === "start") r.startFollowsDep = false;
@@ -2493,6 +2569,33 @@ function renderOcrRows(){
     };
     ["date","flight","sector","start","dep","arr","end","period","block"]
       .forEach(k => bind(main, k, "o-" + k));
+
+    /* once the duty code is confirmed, drop the figures that cannot apply to
+       it: a standby or a day off has no sector, departure, arrival or block,
+       and a day off has no duty times either */
+    main.querySelector(".o-flight").addEventListener("change", () => {
+      const kind = dutyKindFromCode(r.flight);
+      main.dataset.kind = kind;
+      const clear = (key, cls) => {
+        r[key] = "";
+        const f = main.querySelector("." + cls);
+        if(f) f.value = "";
+      };
+      if(kind !== "flight"){
+        clear("sector", "o-sector");
+        clear("dep", "o-dep");
+        clear("arr", "o-arr");
+        clear("block", "o-block");
+        r.blockFollowsTimes = true;
+      }
+      if(kind === "off"){
+        clear("start", "o-start");
+        clear("end", "o-end");
+        clear("period", "o-period");
+        r.startFollowsDep = true;
+      }
+      renderRosterPreview(currentRosterRecords());
+    });
 
     /* picking a date sets the weekday and puts the row back in date order */
     main.querySelector(".o-date").addEventListener("change", () => {

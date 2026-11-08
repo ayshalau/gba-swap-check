@@ -250,12 +250,20 @@ The app is built to work on a phone as well as a desktop, and is installable:
 
 - The two crew members sit side by side as columns on a wide screen and stack on a narrow one.
 - The roster rows are a wide table on a desktop and become a **labelled form** on a narrow one —
-  each field carries its own name, so nothing is left to guess.
+  each field carries its own name, so nothing is left to guess. Date, Duty and Sector take the
+  full width, and the figures pair up underneath: Duty Start with Duty End, Dep with Arr,
+  Period with Block.
+- A row shows only the fields that can apply to its duty code, so a **day off is just a date
+  and a duty code** instead of seven empty boxes. A standby keeps its start, end and period.
+  The values are cleared when the code is confirmed, so the preview and the export stay honest.
 - The duty card keeps the date column beside it and, on a phone, moves the date to a strip
-  above the card so the fields have the full width.
+  above the card. The remove button moves into that strip, and Duty Start/End sit side by side,
+  which makes the card noticeably shorter.
+- Fields are **16px** on a narrow screen so iOS does not zoom the page when one is focused, and
+  buttons and the duty-day tick are at least 44px so they are easy to hit.
+- The four tabs fit on one line down to 360px instead of clipping the last word.
 - The roster preview stays a table and scrolls sideways, because the numbers need the columns.
-- Tap targets, the header and the records list all adapt at 1024px, 900px, 768px, 560px and
-  390px.
+- Everything is checked at 1024px, 900px, 768px, 560px, 402px and 360px.
 
 ## Saving the roster as PDF
 
