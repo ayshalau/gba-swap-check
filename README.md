@@ -345,6 +345,19 @@ npx serve "C:\Users\aysha\Documents\GBA Swap Check"
 For installable PWA behaviour (service worker, offline cache) serve over `http://localhost`
 rather than `file://`.
 
+### Updates and the offline cache
+
+The service worker keeps the app working with no connection, but it must never
+pin an old release:
+
+- **The page** is fetched from the network first. Online, a new release appears on
+  the next load; offline, the cached copy is used.
+- **The install step** fetches each file with `cache: "reload"`, which skips the
+  browser's HTTP cache, so a new version cannot be installed with a stale copy.
+- **Every other file** is served from the cache immediately.
+- Bump `CACHE` in `sw.js` (`gba-swap-check-vNN`) on each release so the old cache
+  is dropped when the new worker activates.
+
 ## Data
 
 All data stays local in `localStorage` under `gbaswapcheck.v2` (records) and
