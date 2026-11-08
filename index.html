@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.json">
 <title>GBA Swap Check</title>
+<meta name="description" content="Offline-first roster validation tool for GBA crew shift and duty swap requests: import a roster PDF, check the swap against the roster rules and keep a record of every check.">
 <style>
   :root{
     --bg:#eef7f8;
@@ -16,13 +17,13 @@
     --panel-2:#e7f4f5;
     --line:#b7dadd;
     --ink:#173a3f;
-    --muted:#5f7d80;
+    --muted:#4e6b6e;
     --gold:#0f7f88;
     --gold-soft:#0a5c63;
-    --sky:#3d7f8a;
-    --danger:#c0392b;
-    --good:#2e7d4f;
-    --warn:#a06500;
+    --sky:#2f6b75;
+    --danger:#b3382b;
+    --good:#266a41;
+    --warn:#8a5600;
     --accent:#A1E3E6;
     --radius:14px;
     --shadow:0 1px 3px rgba(23,58,63,.10);
@@ -119,9 +120,18 @@
     display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
     padding:12px 16px;background:var(--panel-2);border-bottom:1px solid var(--line);
   }
-  .party-head .who{font-weight:700;font-size:15px;color:var(--ink)}
+  .party-head .who{font-weight:700;font-size:15px;color:var(--ink);min-width:0}
   .party-head .who .tag{display:block;font-size:11px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;font-weight:500}
+  /* the name field and the buttons beside it */
+  .party-ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0;flex:1 1 auto}
   .party-body{padding:14px 16px}
+  /* the crew member name field */
+  .party-head .c-name{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);
+    font-family:inherit;font-size:14px;padding:8px 10px;outline:none;
+    width:190px;max-width:100%;flex:1 1 150px;min-width:0;
+  }
+  .party-head .c-name:focus{border-color:var(--accent)}
 
   /* ---------- duty day rows (roster style) ---------- */
   .duty-day{
@@ -165,6 +175,7 @@
     background:var(--panel);border:1px solid var(--line);border-radius:8px;
     color:var(--ink);font-family:inherit;font-size:13px;padding:8px 9px;width:100%;outline:none;
     height:36px;   /* the same for every field, so every row is the same height */
+    min-width:0;   /* let the fields shrink instead of overflowing the card */
   }
   .duty-card input:focus,.duty-card select:focus{border-color:var(--accent)}
   /* a day with more than one sector needs room for the whole chain, so its
@@ -176,16 +187,17 @@
     appearance:none;background:transparent;border:none;color:var(--muted);cursor:pointer;
     font-size:18px;line-height:1;padding:4px 8px;border-radius:6px;
   }
-  .row-del:hover{color:var(--danger);background:rgba(192,57,43,.1)}
+  .row-del:hover{color:var(--danger);background:rgba(179,56,43,.1)}
 
   /* ---------- crew cards ---------- */
-  .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+  .row-head{flex-wrap:wrap;gap:8px}
   .hist-head span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 
   /* ---------- verdict ---------- */
   .verdict{margin-top:18px;border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;background:var(--panel-2)}
-  .verdict.pass{border-color:rgba(46,125,79,.5);background:rgba(46,125,79,.08)}
-  .verdict.fail{border-color:rgba(192,57,43,.5);background:rgba(192,57,43,.08)}
+  .verdict.pass{border-color:rgba(38,106,65,.5);background:rgba(38,106,65,.08)}
+  .verdict.fail{border-color:rgba(179,56,43,.5);background:rgba(179,56,43,.08)}
   .verdict-title{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:700}
   .verdict.pass .verdict-title{color:var(--good)}
   .verdict.fail .verdict-title{color:var(--danger)}
@@ -264,7 +276,7 @@
   .ocr-progress{margin-top:16px}
   .ocr-progress .bar{height:7px;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;overflow:hidden}
   .ocr-progress .fill{height:100%;width:0;background:var(--accent);transition:width .25s}
-  .ocr-error{margin-top:16px;border:1px solid var(--danger);background:rgba(192,57,43,.08);color:var(--danger);border-radius:10px;padding:12px 14px;font-size:14px}
+  .ocr-error{margin-top:16px;border:1px solid var(--danger);background:rgba(179,56,43,.08);color:var(--danger);border-radius:10px;padding:12px 14px;font-size:14px}
 
   /* the editable rows use the same 12 columns as the roster sheet */
   .ocr-row-head,.ocr-row{
@@ -272,13 +284,16 @@
     grid-template-columns:128px 42px 92px 46px 108px 84px 84px 84px 84px 82px 82px 34px;
     gap:6px;align-items:center;margin-bottom:8px;
   }
+  /* each field carries its name, shown only when the row stacks */
+  .ocr-row .f{display:block;min-width:0}
+  .ocr-row .cap{display:none}
   .ocr-row-head{color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
   .ocr-row input,.ocr-row select{
     background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
     color:var(--ink);font-family:inherit;font-size:13px;padding:8px 9px;width:100%;outline:none;
   }
   .ocr-row input:focus,.ocr-row select:focus{border-color:var(--accent)}
-  .ocr-row .low{background:rgba(192,57,43,.08);border-color:rgba(192,57,43,.35)}
+  .ocr-row .low{background:rgba(179,56,43,.08);border-color:rgba(179,56,43,.35)}
   .ocr-row-wrap{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;background:var(--panel)}
   .ocr-row-wrap .ocr-row{margin-bottom:0}
   .ocr-row-extra{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
@@ -303,7 +318,7 @@
   .roster-table tbody tr:hover{background:#f2fafb}
   .roster-table .mono{font-family:"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace}
   .roster-table .do{color:#7a2456;font-weight:600}
-  .roster-table .stby{color:#9a6a00;font-weight:600}
+  .roster-table .stby{color:#7f5800;font-weight:600}
   .roster-table tfoot td{
     padding:7px 8px;border-top:2px solid var(--line);background:var(--panel-2);
     font-weight:700;
@@ -329,17 +344,17 @@
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
   .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);color:var(--muted);background:var(--panel-2)}
-  .badge.pass{color:var(--good);border-color:rgba(46,125,79,.45);background:rgba(46,125,79,.08)}
-  .badge.fail{color:var(--danger);border-color:rgba(192,57,43,.45);background:rgba(192,57,43,.08)}
+  .badge.pass{color:var(--good);border-color:rgba(38,106,65,.45);background:rgba(38,106,65,.08)}
+  .badge.fail{color:var(--danger);border-color:rgba(179,56,43,.45);background:rgba(179,56,43,.08)}
   .badge.do{color:#7a2456;border-color:rgba(122,36,86,.45);background:rgba(122,36,86,.08)}
-  .badge.stby{color:#9a6a00;border-color:rgba(154,106,0,.45);background:rgba(154,106,0,.08)}
+  .badge.stby{color:#7f5800;border-color:rgba(154,106,0,.45);background:rgba(154,106,0,.08)}
   .duty-tag{
     display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;letter-spacing:.04em;
     border:1px solid var(--line);color:var(--muted);background:var(--panel-2);margin:0 4px 4px 0;
   }
   .duty-tag.do{color:#7a2456;border-color:rgba(122,36,86,.45);background:rgba(122,36,86,.08)}
-  .duty-tag.stby{color:#9a6a00;border-color:rgba(154,106,0,.45);background:rgba(154,106,0,.08)}
-  .duty-tag.flight{color:var(--sky);border-color:rgba(61,127,138,.45);background:rgba(61,127,138,.08)}
+  .duty-tag.stby{color:#7f5800;border-color:rgba(154,106,0,.45);background:rgba(154,106,0,.08)}
+  .duty-tag.flight{color:var(--sky);border-color:rgba(47,107,117,.45);background:rgba(47,107,117,.08)}
 
   .empty{padding:36px 20px;text-align:center;color:var(--muted)}
   .empty .big{font-size:34px;margin-bottom:8px;font-family:Arial,Helvetica,sans-serif;font-weight:700;color:var(--gold-soft)}
@@ -349,9 +364,30 @@
     header{padding:14px 16px 0}
     main{padding:20px 16px 48px}
     .panel{padding:16px}
+    .brand-logo{width:62px;height:44px}
   }
   @media (max-width:900px){
+    /* the two crew members stack */
     #parties{grid-template-columns:1fr}
+    /* the roster rows become a labelled form instead of a wide table */
+    .ocr-row-head{display:none}
+    .ocr-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}
+    .ocr-row .cap{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+    .ocr-row-wrap{position:relative;padding:12px 12px 12px 44px}
+    .ocr-row .row-del{position:absolute;top:10px;left:8px}
+    /* the crew card header stacks */
+    .party-head{flex-direction:column;align-items:stretch}
+    .party-head .c-name{width:100%}
+    /* a chained duty and sector take a line each */
+    .duty-day.multi .duty-card label.f-duty,
+    .duty-day.multi .duty-card label.f-sector{flex:1 1 100%;min-width:0}
+    /* the records list stacks the crew name above the duty days */
+    .rec-crew{flex-direction:column;gap:4px}
+    .rec-crew-name{flex:0 0 auto}
+  }
+  @media (min-width:561px) and (max-width:900px){
+    /* a tablet has room for three fields across */
+    .ocr-row{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
   @media (max-width:768px){
     .grid-3{grid-template-columns:1fr 1fr}
@@ -359,15 +395,33 @@
     .logotype{font-size:22px}
     nav button{padding:9px 12px 11px;font-size:13px}
     .duty-card label{flex:1 1 120px}
-    .ocr-row-head,.ocr-row{grid-template-columns:1fr 1fr 1fr}
-    .ocr-row-head{display:none}
-    .ocr-row{padding:12px 0;border-top:1px dashed var(--line);position:relative}
     .rec-top{flex-direction:column;align-items:flex-start}
+    /* the rule value sits under its label */
+    .rule-card .rule-line{flex-direction:column;align-items:flex-start;gap:6px}
+    .rule-card .rule-line .val input{width:100%;max-width:200px}
+    /* roomier tap targets */
+    .row-del{padding:8px 12px;font-size:20px}
+    .duty-check input{width:20px;height:20px}
   }
-  @media (max-width:520px){
+  @media (max-width:560px){
     .grid-3{grid-template-columns:1fr}
     .duty-card label{flex:1 1 140px}
-    .duty-date{flex:0 0 40px}
+    /* the date becomes a strip above the card */
+    .duty-day{
+      display:grid;grid-template-columns:16px 1fr;
+      grid-template-areas:"tick date" "card card";gap:8px;
+    }
+    .duty-check{grid-area:tick}
+    .duty-date{
+      grid-area:date;flex-direction:row;justify-content:flex-start;align-items:baseline;
+      gap:8px;padding:6px 10px;
+    }
+    .duty-card{grid-area:card}
+    .brand-logo{width:52px;height:37px}
+    .logotype{font-size:19px}
+    .brand-sub{font-size:11px;letter-spacing:.1em}
+    .panel{padding:14px}
+    .toast{max-width:calc(100% - 24px)}
   }
 </style>
 </head>
@@ -423,7 +477,7 @@
         <div class="dz-sub">or</div>
         <button class="btn btn-primary" id="pick-file">Choose File</button>
         <div class="dz-hint" id="dz-hint">PDF · A text-based PDF (exported from Excel) gives the best results</div>
-        <input type="file" id="file-input" accept="application/pdf" hidden>
+        <input type="file" id="file-input" accept="application/pdf" aria-label="Roster PDF file" hidden>
       </div>
 
       <div class="row-actions">
@@ -502,12 +556,12 @@
     <div class="panel">
       <div class="panel-title">Saved Swap Records</div>
       <div class="toolbar">
-        <select id="filter-result">
+        <select id="filter-result" aria-label="Filter by result">
           <option value="">All results</option>
           <option value="pass">Approved</option>
           <option value="fail">Rejected</option>
         </select>
-        <input id="filter-text" type="search" placeholder="Search records" style="flex:1;min-width:160px">
+        <input id="filter-text" type="search" aria-label="Search records" placeholder="Search records" style="flex:1;min-width:160px">
         <span class="spacer"></span>
         <span class="hint" id="records-count"></span>
         <button class="btn btn-ghost btn-sm" id="export-records">Export CSV</button>
@@ -944,7 +998,7 @@ function addDutyDay(crewEl, data){
     '<div class="duty-date" title="Change date">' +
       '<span class="dow"></span>' +
       '<span class="dom"></span>' +
-      '<input type="date" class="d-date" value="'+esc(d.date||"")+'">' +
+      '<input type="date" class="d-date" aria-label="Duty date" value="'+esc(d.date||"")+'">' +
     '</div>' +
     '<div class="duty-card">' +
       '<label class="f-duty">Duty<input type="text" class="d-flight" placeholder="e.g. HB 702" value="'+esc(d.flight||"")+'"></label>' +
@@ -1020,8 +1074,8 @@ function addCrew(data){
   el.innerHTML =
     '<div class="party-head">' +
       '<div class="who"><span class="tag">Crew Member</span><span class="crew-name-label">'+esc(d.name||("Crew Member "+crewSeq))+'</span></div>' +
-      '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
-        '<input type="text" class="c-name" value="'+esc(d.name||"")+'" placeholder="Crew member name" style="background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:inherit;font-size:14px;padding:8px 10px;outline:none;width:190px">' +
+      '<div class="party-ctl">' +
+        '<input type="text" class="c-name" aria-label="Crew member name" value="'+esc(d.name||"")+'" placeholder="Crew member name">' +
         '<button class="btn btn-ghost btn-sm c-add-day">+ Duty Day</button>' +
       '</div>' +
     '</div>' +
@@ -1565,7 +1619,7 @@ function renderRules(){
         '<div class="rule-text">'+r.text+'</div>' +
         (editable
           ? '<div class="rule-line"><span class="lbl">Threshold</span><span class="val">' +
-              '<input type="'+(r.time?"time":"number")+'"'+(r.numeric && !r.time?' step="0.5" min="0"':'')+' class="r-val" value="'+esc(r.value)+'"> ' +
+              '<input type="'+(r.time?"time":"number")+'"'+(r.numeric && !r.time?' step="0.5" min="0"':'')+' class="r-val" aria-label="Rule value" value="'+esc(r.value)+'"> ' +
               (r.unit ? esc(r.unit) : "") +
             '</span></div>'
           : '<div class="rule-line"><span class="lbl">Setting</span><span class="val">'+(r.on?"Applied":"Skipped")+'</span></div>') +
@@ -2396,17 +2450,17 @@ function renderOcrRows(){
     const main = document.createElement("div");
     main.className = "ocr-row";
     main.innerHTML =
-      '<input type="date" class="o-date" value="'+esc(r.date||"")+'">' +
-      '<input type="text" class="o-day" placeholder="S" maxlength="3" value="'+esc(r.day||"")+'">' +
-      '<input type="text" class="o-flight" placeholder="Duty" value="'+esc(r.flight||"")+'">' +
-      '<input type="text" class="o-sd" placeholder="SD" value="'+esc(r.sd||"")+'">' +
-      '<input type="text" class="o-sector" placeholder="Sector" value="'+esc(r.sector||"")+'">' +
-      '<input type="text" inputmode="numeric" maxlength="5" class="o-start" placeholder="HHMM" value="'+esc(hmToDigits(r.start))+'">' +
-      '<input type="text" inputmode="numeric" maxlength="5" class="o-dep" placeholder="HHMM" value="'+esc(hmToDigits(r.dep))+'">' +
-      '<input type="text" inputmode="numeric" maxlength="5" class="o-arr" placeholder="HHMM" value="'+esc(hmToDigits(r.arr))+'">' +
-      '<input type="text" inputmode="numeric" maxlength="5" class="o-end" placeholder="HHMM" value="'+esc(hmToDigits(r.end))+'">' +
-      '<input type="text" class="o-period" placeholder="h:mm" value="'+esc(r.period||"")+'">' +
-      '<input type="text" class="o-block" placeholder="h:mm" value="'+esc(r.block||"")+'">' +
+      '<label class="f"><span class="cap">Date</span><input type="date" class="o-date" value="'+esc(r.date||"")+'"></label>' +
+      '<label class="f"><span class="cap">Day</span><input type="text" class="o-day" placeholder="S" maxlength="3" value="'+esc(r.day||"")+'"></label>' +
+      '<label class="f"><span class="cap">Duty</span><input type="text" class="o-flight" placeholder="Duty" value="'+esc(r.flight||"")+'"></label>' +
+      '<label class="f"><span class="cap">SD</span><input type="text" class="o-sd" placeholder="SD" value="'+esc(r.sd||"")+'"></label>' +
+      '<label class="f"><span class="cap">Sector</span><input type="text" class="o-sector" placeholder="Sector" value="'+esc(r.sector||"")+'"></label>' +
+      '<label class="f"><span class="cap">Duty Start</span><input type="text" inputmode="numeric" maxlength="5" class="o-start" placeholder="HHMM" value="'+esc(hmToDigits(r.start))+'"></label>' +
+      '<label class="f"><span class="cap">Dep Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-dep" placeholder="HHMM" value="'+esc(hmToDigits(r.dep))+'"></label>' +
+      '<label class="f"><span class="cap">Arr Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-arr" placeholder="HHMM" value="'+esc(hmToDigits(r.arr))+'"></label>' +
+      '<label class="f"><span class="cap">Duty End</span><input type="text" inputmode="numeric" maxlength="5" class="o-end" placeholder="HHMM" value="'+esc(hmToDigits(r.end))+'"></label>' +
+      '<label class="f"><span class="cap">Duty Period</span><input type="text" class="o-period" placeholder="h:mm" value="'+esc(r.period||"")+'"></label>' +
+      '<label class="f"><span class="cap">Block Hour</span><input type="text" class="o-block" placeholder="h:mm" value="'+esc(r.block||"")+'"></label>' +
       '<button class="row-del" title="Remove row" aria-label="Remove row">×</button>';
 
     /* flag rows the reader could not read confidently */

@@ -243,6 +243,19 @@ the crew names and the recorded details. The count beside it shows how many reco
 **Load into form** puts a saved record back on the Swap Check page, and **Export CSV** writes
 every record out.
 
+## Responsive layout
+
+The app is built to work on a phone as well as a desktop, and is installable:
+
+- The two crew members sit side by side as columns on a wide screen and stack on a narrow one.
+- The roster rows are a wide table on a desktop and become a **labelled form** on a narrow one —
+  each field carries its own name, so nothing is left to guess.
+- The duty card keeps the date column beside it and, on a phone, moves the date to a strip
+  above the card so the fields have the full width.
+- The roster preview stays a table and scrolls sideways, because the numbers need the columns.
+- Tap targets, the header and the records list all adapt at 1024px, 900px, 768px, 560px and
+  390px.
+
 ## Saving the roster as PDF
 
 The **Roster Preview & PDF** panel reproduces the GBA roster layout and exports it with
