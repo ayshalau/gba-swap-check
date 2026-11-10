@@ -160,15 +160,22 @@
   }
   .duty-date:focus-within{outline:2px solid var(--accent);outline-offset:1px}
   .duty-card{
-    flex:1 1 auto;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-end;
+    flex:1 1 auto;display:grid;gap:8px 10px;align-items:end;
+    /* duty and sector share the first line, the two duty times the second;
+       each time gets half the card, so a whole "09:50 am" fits its column */
+    grid-template-columns:1fr 1fr 36px;
     padding:10px 12px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);
   }
+  .duty-card .f-duty{grid-column:1;grid-row:1}
+  .duty-card .f-sector{grid-column:2;grid-row:1}
+  .duty-card .f-start{grid-column:1;grid-row:2}
+  .duty-card .f-end{grid-column:2;grid-row:2}
+  .duty-card .row-del{grid-column:3;grid-row:1;justify-self:end;align-self:end;margin:0}
   /* a day off or a leave shows only the duty code — the card keeps the same
      size as the others, but its duty field stays narrow */
-  .duty-day.compact .duty-card label{flex:0 0 auto;min-width:0}
   .duty-day.compact .duty-card input{width:64px}
   .duty-card label{
-    flex:1 1 84px;min-width:74px;display:flex;flex-direction:column;gap:4px;
+    min-width:0;display:flex;flex-direction:column;gap:4px;
     font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
   }
   .duty-card input,.duty-card select{
@@ -179,10 +186,11 @@
   }
   .duty-card input:focus,.duty-card select:focus{border-color:var(--accent)}
   /* a day with more than one sector needs room for the whole chain, so its
-     duty and sector take a line of their own */
-  .duty-day.multi .duty-card label.f-duty{flex:1 1 190px;min-width:170px}
-  .duty-day.multi .duty-card label.f-sector{flex:1 1 190px;min-width:170px}
-  .duty-card .row-del{flex:0 0 auto;align-self:center;margin-left:auto}
+     duty code and sector take a line each and the two times sit below */
+  .duty-day.multi .duty-card .f-duty{grid-column:1/4;grid-row:1}
+  .duty-day.multi .duty-card .f-sector{grid-column:1/4;grid-row:2}
+  .duty-day.multi .duty-card .f-start{grid-column:1;grid-row:3}
+  .duty-day.multi .duty-card .f-end{grid-column:2;grid-row:3}
   .row-del{
     appearance:none;background:transparent;border:none;color:var(--muted);cursor:pointer;
     font-size:18px;line-height:1;padding:4px 8px;border-radius:6px;
@@ -371,11 +379,12 @@
     /* the two crew members stack */
     #parties{grid-template-columns:1fr}
     /* the roster rows become a labelled form instead of a wide table; the
-       date, duty and sector get the full width, the figures pair underneath */
+       date and the duty share the first line, the sector takes a line of its
+       own, and the figures pair underneath */
     .ocr-row-head{display:none}
     .ocr-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}
-    .ocr-row .f-date,
-    .ocr-row .f-duty,
+    .ocr-row .f-date{grid-column:1}
+    .ocr-row .f-duty{grid-column:2}
     .ocr-row .f-sector{grid-column:1/-1}
     .ocr-row .cap{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
     .ocr-row input,.ocr-row select{font-size:16px;min-height:42px;min-width:0}
@@ -401,9 +410,6 @@
     /* the crew card header stacks */
     .party-head{flex-direction:column;align-items:stretch}
     .party-head .c-name{width:100%}
-    /* a chained duty and sector take a line each */
-    .duty-day.multi .duty-card label.f-duty,
-    .duty-day.multi .duty-card label.f-sector{flex:1 1 100%;min-width:0}
     /* the records list stacks the crew name above the duty days */
     .rec-crew{flex-direction:column;gap:4px}
     .rec-crew-name{flex:0 0 auto}
@@ -426,22 +432,25 @@
   @media (min-width:561px) and (max-width:900px){
     /* a tablet has room for three fields across */
     .ocr-row{grid-template-columns:repeat(3,minmax(0,1fr))}
-    .ocr-row .f-date{grid-column:1/-1}
-    .ocr-row .f-duty{grid-column:span 2}
-    .ocr-row .f-sector{grid-column:span 1}
-    /* a date field does not need the whole tablet width */
-    .ocr-row .o-date{max-width:260px}
-    /* when the sector is hidden, the duty takes the whole line */
-    .ocr-row[data-kind="off"] .f-duty,
-    .ocr-row[data-kind="standby"] .f-duty,
-    .ocr-row[data-kind="other"] .f-duty{grid-column:1/-1}
+    /* the date sits in the first column, with the duty and the sector beside
+       it, so the three boxes are the same width and line up */
+    .ocr-row .f-date{grid-column:1;grid-row:1}
+    .ocr-row .f-duty{grid-column:2;grid-row:1}
+    .ocr-row .f-sector{grid-column:3;grid-row:1}
+    /* the figures keep their own lines, so a column always holds the same
+       field however the duty code changes */
+    .ocr-row .f-start{grid-column:1;grid-row:2}
+    .ocr-row .f-end{grid-column:2;grid-row:2}
+    .ocr-row .f-dep{grid-column:3;grid-row:2}
+    .ocr-row .f-arr{grid-column:1;grid-row:3}
+    .ocr-row .f-period{grid-column:2;grid-row:3}
+    .ocr-row .f-block{grid-column:3;grid-row:3}
   }
   @media (max-width:768px){
     .grid-3{grid-template-columns:1fr 1fr}
     .grid-2{grid-template-columns:1fr}
     .logotype{font-size:22px}
     nav button{padding:9px 12px 11px;font-size:13px}
-    .duty-card label{flex:1 1 120px}
     .rec-top{flex-direction:column;align-items:flex-start}
     /* the rule value sits under its label */
     .rule-card .rule-line{flex-direction:column;align-items:flex-start;gap:6px}
@@ -450,14 +459,38 @@
     .row-del{padding:8px 12px;font-size:20px}
     .duty-check input{width:20px;height:20px}
   }
+  @media (min-width:701px) and (max-width:900px){
+    /* a stacked crew panel is wide enough for one line: duty, sector and the
+       two times side by side; 128px is a whole "09:50 am" plus the clock icon
+       at the 16px field size used on a touch screen */
+    .duty-card{grid-template-columns:minmax(0,1.15fr) minmax(0,1.15fr) minmax(128px,.9fr) minmax(128px,.9fr) 36px}
+    .duty-card .f-duty{grid-column:1;grid-row:1}
+    .duty-card .f-sector{grid-column:2;grid-row:1}
+    .duty-card .f-start{grid-column:3;grid-row:1}
+    .duty-card .f-end{grid-column:4;grid-row:1}
+    .duty-card .row-del{grid-column:5;grid-row:1}
+    .duty-day.multi .duty-card .f-duty{grid-column:1/5;grid-row:1}
+    .duty-day.multi .duty-card .f-sector{grid-column:1/3;grid-row:2}
+    .duty-day.multi .duty-card .f-start{grid-column:3;grid-row:2}
+    .duty-day.multi .duty-card .f-end{grid-column:4;grid-row:2}
+  }
   @media (max-width:560px){
     .grid-3{grid-template-columns:1fr}
+    /* the date gets a column of its own, exactly wide enough for a whole
+       date and its picker, so it lines up with the fields underneath */
+    .ocr-row{grid-template-columns:128px minmax(0,1fr)}
+    .ocr-row .o-date{padding:8px 6px}
     /* the card is a two-column grid: duty and sector take a line each, the
        figures pair up, and the remove button sits in the date strip */
     .duty-card{grid-area:card;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
-    .duty-card label{flex:none;min-width:0}
     .duty-card .f-duty,
-    .duty-card .f-sector{grid-column:1/-1}
+    .duty-card .f-sector,
+    .duty-day.multi .duty-card .f-duty,
+    .duty-day.multi .duty-card .f-sector{grid-column:1/-1;grid-row:auto}
+    .duty-card .f-start,
+    .duty-day.multi .duty-card .f-start{grid-column:1;grid-row:auto}
+    .duty-card .f-end,
+    .duty-day.multi .duty-card .f-end{grid-column:2;grid-row:auto}
     .duty-day.compact .duty-card{grid-template-columns:1fr}
     /* the date becomes a strip above the card, with the remove button at its
        right end so it no longer takes a line of its own */
@@ -494,6 +527,9 @@
     /* keep all four tabs on one line instead of scrolling a clipped word */
     nav button{padding:10px 9px 12px;font-size:12px}
     .brand-sub{letter-spacing:.08em}
+    /* a very narrow phone needs every pixel for the two duty times */
+    .duty-card{padding:10px;gap:8px}
+    .duty-card input{padding:8px 6px}
   }
 </style>
 </head>
