@@ -283,7 +283,10 @@ The app is built to work on a phone as well as a desktop, and is installable:
   reads as a grid. That holds in a narrow desktop window too, not only on a touch screen. The
   value is **centred** in its box on a phone, with the label still at the left edge. iOS wraps a
   date or time field in a native box that ignores that height, so on iOS the native look is
-  turned off for the time fields and the picker still opens on a tap.
+  turned off for the time fields and the picker still opens on a tap. That field is then kept
+  inline-block rather than block: iOS centres the value of a date or time field in an inline
+  box but pushes it to the top in a block box (WebKit bug 139848), so Duty Start and Duty End
+  sit in the middle of their boxes, both across and down, like the duty code and the sector.
 - Fields are **16px** on a narrow screen so iOS does not zoom the page when one is focused, and
   buttons and the duty-day tick are at least 44px so they are easy to hit. The same rules apply to
   **any touch screen** (`pointer: coarse`), so a phone turned sideways keeps the large type and

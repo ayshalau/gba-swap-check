@@ -552,15 +552,27 @@
     /* iOS wraps a date or time field in a native box of its own, which ignores
        the height set here and comes out shorter than a plain text field; with
        the native look turned off the two times match the duty code and the
-       sector. The picker still opens on a tap. */
+       sector. The picker still opens on a tap.
+       A block box would top-align the value here (WebKit bug 139848), which is
+       why the field is left inline-block: that is the box iOS centres the
+       value in, so the times sit in the middle of their boxes like the duty
+       code and the sector. */
     html.is-ios .duty-card input[type="time"]{
       -webkit-appearance:none;appearance:none;
-      display:block;padding:0 8px;
+      padding:0 8px;
+    }
+    /* the browser draws the value of a time field itself, so the rule above
+       reaches the box but not the text inside it — these hooks centre the text
+       as well, against the browser's own left alignment */
+    html.is-ios .duty-card input[type="time"]::-webkit-date-and-time-value,
+    html.is-ios .duty-card input[type="time"]::-webkit-datetime-edit{
+      text-align:center !important;
     }
     /* the same native box sits around the date field in the extracted roster
-       rows; turning it off lets that field take the height of the others */
+       rows; turning it off lets that field take the height of the others,
+       and it stays inline-block for the same reason as the times above */
     html.is-ios .ocr-row input[type="date"]{
-      -webkit-appearance:none;appearance:none;display:block;
+      -webkit-appearance:none;appearance:none;
     }
     .duty-check input{width:22px;height:22px}
     /* the remove button in the roster table is a real button on a touch screen */
