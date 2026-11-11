@@ -557,6 +557,11 @@
       -webkit-appearance:none;appearance:none;
       display:block;padding:0 8px;
     }
+    /* the same native box sits around the date field in the extracted roster
+       rows; turning it off lets that field take the height of the others */
+    html.is-ios .ocr-row input[type="date"]{
+      -webkit-appearance:none;appearance:none;display:block;
+    }
     .duty-check input{width:22px;height:22px}
     /* the remove button in the roster table is a real button on a touch screen */
     .ocr-row .row-del{
@@ -575,6 +580,10 @@
     .ocr-row .o-date::-webkit-calendar-picker-indicator{
       width:14px;height:14px;padding:0;margin-left:0;
     }
+    /* the extracted duty form follows the same two rules as a duty card:
+       every box is the same height, and the value sits in the middle of it */
+    .ocr-row input,.ocr-row select{height:44px;min-height:44px;text-align:center}
+    .ocr-row input[type="date"]::-webkit-date-and-time-value{text-align:center}
     /* the card uses two sizes: the duty code (which can hold a whole chain,
        "HB 702 → HB 703") and the sector are text and take a whole line, the
        two times are short and pair up at half a line */

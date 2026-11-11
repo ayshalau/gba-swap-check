@@ -266,7 +266,9 @@ The app is built to work on a phone as well as a desktop, and is installable:
   block) is half, two to a line, and a long one (the sector) takes the whole line. On a phone the
   date shares the first line with the duty code and is the same width as Duty Start, Dep Time and
   the rest, so the whole row is on one grid. On a tablet the date, duty and sector share the first
-  line, all three the same width.
+  line, all three the same width. On a phone every box in the extracted-duty form is **44px tall**
+  and the value is **centred** in it, matching the duty cards, while each label stays at the left
+  edge.
 - A row shows only the fields that can apply to its duty code, so a **day off is just a date
   and a duty code** instead of seven empty boxes. A standby keeps its start, end and period.
   The values are cleared when the code is confirmed, so the preview and the export stay honest.
