@@ -223,6 +223,19 @@
     min-width:0;   /* let the fields shrink instead of overflowing the card */
   }
   .duty-card input:focus,.duty-card select:focus{border-color:var(--accent)}
+  /* an annual leave day cannot be swapped, so its tick is locked and a note
+     under the duty code says why */
+  .duty-card .lock-note{
+    display:none;font-size:10px;letter-spacing:.02em;color:var(--warn);
+    text-transform:none;margin-top:1px;
+  }
+  .duty-day.locked .lock-note{display:block}
+  /* the locked row stays readable — the dimmed tick and the note say it is
+     not part of the request */
+  .duty-day.locked .duty-date,
+  .duty-day.locked .duty-card{opacity:1}
+  .duty-day.locked .duty-card{border-color:rgba(138,86,0,.4)}
+  .duty-check input:disabled{opacity:.35;cursor:not-allowed}
   .row-del{
     appearance:none;background:transparent;border:none;color:var(--muted);cursor:pointer;
     font-size:18px;line-height:1;padding:4px 8px;border-radius:6px;
@@ -893,6 +906,9 @@ const DEFAULT_RULES = [
   { group:"2. Swap Limitations", id:"allowDoToDo", on:true, label:"Allow DO to DO Swaps",
     value:1, unit:"", numeric:false,
     text:"Permit a <b>DO swapped for a DO</b> without the 50-hour block minimum applying." },
+  { group:"2. Swap Limitations", id:"noAnnualLeaveSwap", on:true, label:"Annual Leave (AL) Cannot Be Swapped",
+    value:1, unit:"", numeric:false,
+    text:"<b>Annual Leave (AL)</b> is not a duty day, so it cannot be swapped — neither swapped out nor taken in place of a duty. An AL day ticked in a swap request is rejected: untick it and swap an actual duty day instead." },
 
   /* --- 3. DO and Standby Duty --- */
   { group:"3. Day Off (DO) and Standby Duty", id:"doMinHours", on:true, label:"Minimum DO Length",
@@ -1273,6 +1289,33 @@ function rosterCounts(crews){
   return { crews: used.length, days: days, sel: sel };
 }
 
+/* Annual leave (AL) is not a duty day, so it cannot be swapped. While that
+   rule is on, the tick of an AL day is locked off and a note under the duty
+   code says why, so the request cannot be built with a leave in it. */
+function syncLeaveLock(el){
+  const box = el.querySelector(".d-check");
+  if(!box) return;
+  const code = (el.querySelector(".d-flight").value || "").trim();
+  const isLeave = dutyCodes(code).some(c => c.toUpperCase() === "AL");
+  const locked = isLeave && ruleOn("noAnnualLeaveSwap");
+  box.disabled = locked;
+  if(locked) box.checked = false;
+  el.dataset.selected = (!locked && box.checked) ? "1" : "0";
+  el.classList.toggle("locked", locked);
+  const lab = el.querySelector(".duty-check");
+  if(lab) lab.title = locked
+    ? "Annual leave (AL) cannot be swapped"
+    : "Include this duty day in the swap check";
+}
+
+/* Re-apply the leave lock to every duty day on screen — called when the rule
+   is switched on or off in the Rules tab. */
+function refreshLeaveLocks(){
+  document.querySelectorAll("#parties .duty-day").forEach(syncLeaveLock);
+  document.querySelectorAll("#parties .party").forEach(updateSelCount);
+  updateSummary();
+}
+
 function addDutyDay(crewEl, data){
   const d = data || {};
   const el = document.createElement("div");
@@ -1292,7 +1335,7 @@ function addDutyDay(crewEl, data){
       '<input type="date" class="d-date" aria-label="Duty date" value="'+esc(d.date||"")+'">' +
     '</div>' +
     '<div class="duty-card">' +
-      '<label class="f-duty">Duty<input type="text" class="d-flight" placeholder="HB 702" value="'+esc(d.flight||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"></label>' +
+      '<label class="f-duty">Duty<input type="text" class="d-flight" placeholder="HB 702" value="'+esc(d.flight||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"><span class="lock-note">Annual leave — not swappable</span></label>' +
       '<label class="f-sector">Sector<input type="text" class="d-sector" placeholder="HKG TPE" value="'+esc(d.sector||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"></label>' +
       '<label class="f-start"><span class="lbl-text">Duty Start</span><input type="time" class="d-start" value="'+esc(d.start||"")+'"></label>' +
       '<label class="f-end"><span class="lbl-text">Duty End</span><input type="time" class="d-end" value="'+esc(d.end||"")+'"></label>' +
@@ -1311,6 +1354,8 @@ function addDutyDay(crewEl, data){
     el.dataset.dutyType = dutyTypeFromCode(el.querySelector(".d-flight").value);
     syncDutyFields(el);
     syncDutyType(el);
+    syncLeaveLock(el);
+    updateSelCount(el.closest(".party"));
   });
   /* a flight with no printed block hour gets one from its duty times */
   ["start","end"].forEach(k => {
@@ -1337,6 +1382,7 @@ function addDutyDay(crewEl, data){
   updateDutyDateLabel(el);
   syncDutyFields(el);
   syncDutyType(el);
+  syncLeaveLock(el);
   return el;
 }
 
@@ -1396,8 +1442,10 @@ function addCrew(data){
   /* tick or clear every duty day of this crew member */
   el.querySelector(".sel-all").addEventListener("click", () => {
     const boxes = [...el.querySelectorAll(".d-check")];
-    const anyOff = boxes.some(b => !b.checked);
-    boxes.forEach(b => {
+    /* a locked day (an annual leave) is never ticked */
+    const free = boxes.filter(b => !b.disabled);
+    const anyOff = free.some(b => !b.checked);
+    free.forEach(b => {
       b.checked = anyOff;
       b.closest(".duty-day").dataset.selected = anyOff ? "1" : "0";
     });
@@ -1512,6 +1560,18 @@ function validate(data){
     }
 
     /* Rule 2 — block hours are assessed across the swap (see cross-crew section) */
+
+    /* Rule 2 — annual leave is not a duty, so it cannot be swapped. A leave
+       day shows as "AL" (or inside a chain) on the duty card and as type DO;
+       the check looks at the code itself, so it flags the leave, not the days
+       off that can be swapped. */
+    if(ruleOn("noAnnualLeaveSwap")){
+      duties.forEach(d => {
+        if(dutyCodes(d.flight).some(c => c.toUpperCase() === "AL")){
+          issues.push({ ok:false, who, text:who+": "+fmtDate(d.date)+" is Annual Leave (AL), which cannot be swapped." });
+        }
+      });
+    }
 
     /* Rule 3 — DO rules */
     const doDays = duties.filter(d => d.type === "DO");
@@ -1934,6 +1994,8 @@ function renderRules(){
       onEl.nextSibling.textContent = r.on ? " Enabled" : " Disabled";
       saveRules();
       updateHint();
+      /* the leave lock follows the rule, so the duty days are re-checked */
+      if(r.id === "noAnnualLeaveSwap") refreshLeaveLocks();
     });
     if(valEl){
       valEl.addEventListener("change", () => {

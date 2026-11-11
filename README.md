@@ -9,7 +9,7 @@ Offline-first PWA for validating crew shift and duty swap requests against GBA r
 
 - **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
 - **Roster Import** — upload a roster PDF and read it in the browser. Duty days are extracted as editable rows, then added to a swap request in one click. The file is never uploaded to a server.
-- **Rules** - all 27 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
+- **Rules** - all 28 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
 - **Records** - every check is saved with its result and findings; filter by result, search, load back into the form, delete, or export to CSV.
 
 ## Roster import
@@ -352,6 +352,10 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 - If total block hours on roster stage or after swapping is below 50 hours, swapping-out
   block hours is not allowed — except DO-to-DO swaps, duty swaps with the same block hours,
   and swap-in duty with higher block hours.
+- **Annual Leave (AL) cannot be swapped** — it is not a duty day, so it can neither be swapped
+  out nor taken in place of a duty. While the rule is on, an AL day cannot be ticked at all: the
+  tick is locked and the card says "Annual leave — not swappable". The check also rejects a
+  request that carries an AL day.
 
 **3. Day Off (DO) and Standby Duty**
 - A single DO must include 2 local nights and be at least 34 hours. A local night is 8
