@@ -545,7 +545,18 @@
     .btn-sm{min-height:40px}
     .btn-mini{min-height:36px}
     nav button{min-height:44px}
-    .duty-card input,.duty-card select{height:42px}
+    /* one height for every box in the duty card: the duty code, the sector and
+       the two times line up exactly, so a card reads as a grid instead of a
+       stack of boxes that almost match */
+    .duty-card input,.duty-card select{height:42px;min-height:42px}
+    /* iOS wraps a date or time field in a native box of its own, which ignores
+       the height set here and comes out shorter than a plain text field; with
+       the native look turned off the two times match the duty code and the
+       sector. The picker still opens on a tap. */
+    html.is-ios .duty-card input[type="time"]{
+      -webkit-appearance:none;appearance:none;
+      display:block;padding:0 8px;
+    }
     .duty-check input{width:22px;height:22px}
     /* the remove button in the roster table is a real button on a touch screen */
     .ocr-row .row-del{
@@ -591,6 +602,10 @@
       grid-area:date;flex-direction:row;justify-content:flex-start;align-items:center;
       gap:8px;padding:6px 46px 6px 10px;min-height:44px;
     }
+    /* every box in the card is the same height as the date strip above it, so
+       the card is a grid of equal rows — this holds in a narrow desktop window
+       too, where the pointer is not coarse */
+    .duty-card input,.duty-card select{height:44px;min-height:44px}
     .duty-card .row-del{
       position:absolute;top:0;right:0;width:44px;height:44px;
       display:flex;align-items:center;justify-content:center;padding:0;

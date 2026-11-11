@@ -276,6 +276,11 @@ The app is built to work on a phone as well as a desktop, and is installable:
 - The two duty times always get room for a whole "09:50 am" plus the clock icon, so a time is
   never cut off inside its box: on a computer they share the third line of the card, each taking
   half of it, and on a 320px phone they take a line each with the clock icon drawn smaller.
+- Every field in a duty card is **the same height on a phone** — the duty code, the sector and
+  the two times all sit in 44px boxes, the same height as the date strip above them, so a card
+  reads as a grid. That holds in a narrow desktop window too, not only on a touch screen. iOS
+  wraps a date or time field in a native box that ignores that height, so on iOS the native look
+  is turned off for the time fields and the picker still opens on a tap.
 - Fields are **16px** on a narrow screen so iOS does not zoom the page when one is focused, and
   buttons and the duty-day tick are at least 44px so they are easy to hit. The same rules apply to
   **any touch screen** (`pointer: coarse`), so a phone turned sideways keeps the large type and
