@@ -163,15 +163,15 @@
   .duty-date:focus-within{outline:2px solid var(--accent);outline-offset:1px}
   .duty-card{
     flex:1 1 auto;display:grid;gap:8px 10px;align-items:end;
-    /* duty and sector share the first line, the two duty times the second;
-       each time gets half the card, so a whole "09:50 am" fits its column */
+    /* the card is a stack: the duty code on the first line, the sector on the
+       second, and the two duty times side by side on the third */
     grid-template-columns:1fr 1fr 36px;
     padding:10px 12px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);
   }
-  .duty-card .f-duty{grid-column:1;grid-row:1}
-  .duty-card .f-sector{grid-column:2;grid-row:1}
-  .duty-card .f-start{grid-column:1;grid-row:2}
-  .duty-card .f-end{grid-column:2;grid-row:2}
+  .duty-card .f-duty{grid-column:1/3}
+  .duty-card .f-sector{grid-column:1/3}
+  .duty-card .f-start{grid-column:1}
+  .duty-card .f-end{grid-column:2}
   .duty-card .row-del{grid-column:3;grid-row:1;justify-self:end;align-self:end;margin:0}
   /* a day off or a leave shows only the duty code — the card keeps the same
      size as the others, but its duty field stays narrow */
@@ -187,12 +187,6 @@
     min-width:0;   /* let the fields shrink instead of overflowing the card */
   }
   .duty-card input:focus,.duty-card select:focus{border-color:var(--accent)}
-  /* a day with more than one sector needs room for the whole chain, so its
-     duty code and sector take a line each and the two times sit below */
-  .duty-day.multi .duty-card .f-duty{grid-column:1/4;grid-row:1}
-  .duty-day.multi .duty-card .f-sector{grid-column:1/4;grid-row:2}
-  .duty-day.multi .duty-card .f-start{grid-column:1;grid-row:3}
-  .duty-day.multi .duty-card .f-end{grid-column:2;grid-row:3}
   .row-del{
     appearance:none;background:transparent;border:none;color:var(--muted);cursor:pointer;
     font-size:18px;line-height:1;padding:4px 8px;border-radius:6px;
@@ -464,39 +458,6 @@
     /* roomier tap targets */
     .row-del{padding:8px 12px;font-size:20px}
     .duty-check input{width:20px;height:20px}
-  }
-  @media (min-width:701px) and (max-width:900px){
-    /* a stacked crew panel is wide enough for one line: duty, sector and the
-       two times side by side; 128px is a whole "09:50 am" plus the clock icon
-       at the 16px field size used on a touch screen */
-    .duty-card{grid-template-columns:minmax(0,1.15fr) minmax(0,1.15fr) minmax(128px,.9fr) minmax(128px,.9fr) 36px}
-    .duty-card .f-duty{grid-column:1;grid-row:1}
-    .duty-card .f-sector{grid-column:2;grid-row:1}
-    .duty-card .f-start{grid-column:3;grid-row:1}
-    .duty-card .f-end{grid-column:4;grid-row:1}
-    .duty-card .row-del{grid-column:5;grid-row:1}
-    .duty-day.multi .duty-card .f-duty{grid-column:1/5;grid-row:1}
-    .duty-day.multi .duty-card .f-sector{grid-column:1/3;grid-row:2}
-    .duty-day.multi .duty-card .f-start{grid-column:3;grid-row:2}
-    .duty-day.multi .duty-card .f-end{grid-column:4;grid-row:2}
-  }
-  @media (min-width:1250px){
-    /* a wide screen has room for one line: duty, sector and the two duty
-       times side by side, with the remove button at the end */
-    .duty-card{
-      grid-template-columns:minmax(84px,1fr) minmax(84px,1fr) minmax(112px,.9fr) minmax(112px,.9fr) 32px;
-      gap:8px;
-    }
-    .duty-card .f-duty{grid-column:1;grid-row:1}
-    .duty-card .f-sector{grid-column:2;grid-row:1}
-    .duty-card .f-start{grid-column:3;grid-row:1}
-    .duty-card .f-end{grid-column:4;grid-row:1}
-    .duty-card .row-del{grid-column:5;grid-row:1}
-    /* a chained duty keeps its own line, and the times sit under the sector */
-    .duty-day.multi .duty-card .f-duty{grid-column:1/5;grid-row:1}
-    .duty-day.multi .duty-card .f-sector{grid-column:1/3;grid-row:2}
-    .duty-day.multi .duty-card .f-start{grid-column:3;grid-row:2}
-    .duty-day.multi .duty-card .f-end{grid-column:4;grid-row:2}
   }
   @media (max-width:560px){
     .grid-3{grid-template-columns:1fr}

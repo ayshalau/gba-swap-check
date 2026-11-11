@@ -249,10 +249,11 @@ every record out.
 The app is built to work on a phone as well as a desktop, and is installable:
 
 - The two crew members sit side by side as columns on a wide screen and stack on a narrow one.
-- On a **computer screen (1250 px and wider)** a duty card is a single line: **Duty, Sector,
-  Duty Start and Duty End side by side**, with the remove button at the end. Below that the card
-  falls back to two lines of two fields, and a tablet keeps all four on one line with the times
-  at their 128 px minimum.
+- On a **computer screen** a duty card is a stack: the **duty code on the first line, the sector
+  on the second, and the two duty times side by side on the third**. A standby has no sector, so
+  its card is the duty code on the first line and **Standby Start with Standby End** on the
+  second. A day off is the duty code alone. A phone uses the same stack, with the date strip
+  above it.
 - The roster rows are a wide table on a desktop and become a **labelled form** on a narrow one —
   each field carries its own name, so nothing is left to guess. The date has a column of its own,
   exactly wide enough for a whole date and its picker, and sits beside the duty code; the sector
@@ -266,9 +267,8 @@ The app is built to work on a phone as well as a desktop, and is installable:
   above the card. The remove button moves into that strip, and Duty Start/End sit side by side,
   which makes the card noticeably shorter.
 - The two duty times always get room for a whole "09:50 am" plus the clock icon, so a time is
-  never cut off inside its box: they take half the card on a phone, keep at least 112 px on a
-  computer, and 128 px when the card is wide enough for one line. On a 320px phone the two
-  times take a line each instead, and the clock icon is drawn smaller to make room.
+  never cut off inside its box: on a computer they share the third line of the card, each taking
+  half of it, and on a 320px phone they take a line each with the clock icon drawn smaller.
 - Fields are **16px** on a narrow screen so iOS does not zoom the page when one is focused, and
   buttons and the duty-day tick are at least 44px so they are easy to hit.
 - The four tabs fit on one line down to 320px instead of clipping the last word.
