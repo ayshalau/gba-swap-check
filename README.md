@@ -81,6 +81,10 @@ roster fields are filled from them like this:
 - Standby (`STB - H04`) fills Duty Start from STD and Duty End from STA, with no Dep Time,
   Arr Time or Block Hour. `DO` and `AL` leave every time blank. A standby is added to the swap
   request as a **Standby** duty, so the standby rules apply to it.
+- A duty with no times at all — `DUTY`, `NDA`, `NB` and `DO-R` — is added to the request as a
+  **Duty**: it carries no sector, no duty start and no duty end, and its card shows the duty
+  code on its own. The rules still count it as a duty day, but the time-based rules skip it
+  because it has no times.
 - A two-sector duty day is one duty: Duty Start on the first sector row, Duty End and the
   total Duty Period on the last row, with the duty cells in between left blank.
 - Whatever headings the uploaded PDF uses, the imported roster is always shown in the
@@ -176,8 +180,9 @@ month in a narrow column on the left (`SUN` over `8`), and the duty itself in a 
 A second sector on the same day gets its own row with the same date.
 
 There is no duty type column: the type follows the duty code — `DO` and `AL` are days off, a
-standby code (`H04`, `H14`) is a standby and anything else is a flight. The time labels follow
-the type ("Standby Start", "DO Starts").
+standby code (`H04`, `H14`) is a standby, `DUTY`, `NDA`, `NB` and `DO-R` are duties with no
+times and anything else is a flight. The time labels follow the type ("Standby Start",
+"DO Starts").
 
 Only a flight shows its full card. The fields a duty does not have are hidden and cleared, the
 way the crew roster app lists them:
@@ -187,12 +192,13 @@ way the crew roster app lists them:
 | `HB 702` (flight) | Duty, Sector, Duty Start, Duty End |
 | `H04`, `H14` (standby) | Duty, Standby Start, Standby End |
 | `A`, `GD` (other ground duty) | Duty, Duty Start, Duty End |
+| `DUTY`, `NDA`, `NB`, `DO-R` (duty with no times) | Duty |
 | `DO`, `AL` (day off or leave) | Duty |
 
-A day off or leave shows only its duty code, so its duty field stays narrow while the card
-itself keeps the same size as the others. Every row is the same height, so the date column
-lines up all the way down the card, and the remove button sits at the right of every card.
-Changing the duty code re-fits the row straight away.
+A duty with no times, a day off or a leave shows only its duty code, so its duty field stays
+narrow while the card itself keeps the same size as the others. Every row is the same height, so
+the date column lines up all the way down the card, and the remove button sits at the right of
+every card. Changing the duty code re-fits the row straight away.
 
 ### Choosing the duty days to check
 

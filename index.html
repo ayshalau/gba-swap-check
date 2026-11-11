@@ -406,7 +406,14 @@
     .ocr-row[data-kind="other"] .f-sector,
     .ocr-row[data-kind="other"] .f-dep,
     .ocr-row[data-kind="other"] .f-arr,
-    .ocr-row[data-kind="other"] .f-block{display:none}
+    .ocr-row[data-kind="other"] .f-block,
+    .ocr-row[data-kind="notime"] .f-sector,
+    .ocr-row[data-kind="notime"] .f-start,
+    .ocr-row[data-kind="notime"] .f-end,
+    .ocr-row[data-kind="notime"] .f-dep,
+    .ocr-row[data-kind="notime"] .f-arr,
+    .ocr-row[data-kind="notime"] .f-period,
+    .ocr-row[data-kind="notime"] .f-block{display:none}
     /* the crew card header stacks */
     .party-head{flex-direction:column;align-items:stretch}
     .party-head .c-name{width:100%}
@@ -1014,20 +1021,31 @@ function dutyTypeFromCode(code){
   const kind = dutyKindFromCode(code);
   if(kind === "off") return "DO";
   if(kind === "standby") return "Standby";
+  if(kind === "notime") return "Duty";
   return "Flight";
+}
+
+/* Some duty codes carry no duty times at all: a general duty, a no-duty
+   assignment, a briefing and a rest day. Their card shows the duty code on
+   its own, with no duty start and no duty end. */
+function isNoTimeCode(code){
+  const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
+  return s === "DUTY" || s === "NDA" || s === "NB" || s === "DO-R" || s === "DOR";
 }
 
 /* What kind of duty the code names:
      flight   — a flight number (HB 702)
      standby  — a standby code (H04, H14)
      other    — another ground duty (A, GD)
-     off      — a day off or a leave (DO, AL) */
+     off      — a day off or a leave (DO, AL)
+     notime   — a duty with no duty times (DUTY, NDA, NB, DO-R) */
 function dutyKindFromCode(code){
   const codes = dutyCodes(code);
   if(!codes.length) return "flight";                 /* nothing typed yet */
   for(const c of codes){
     const s = c.toUpperCase();
     if(s === "DO" || s === "AL") return "off";
+    if(isNoTimeCode(s)) return "notime";
     if(/^H\d{2}$/.test(s)) return "standby";
     if(/^(STB|STBY)/.test(s)) return "standby";
     if(looksLikeFlightNo(s)) return "flight";
@@ -1036,9 +1054,10 @@ function dutyKindFromCode(code){
 }
 
 /* Only a flight has a sector. A standby or another ground duty has no sector,
-   and a day off or leave has no duty times either — the roster app shows
-   just the duty code on those rows. The values are cleared as well, so the
-   rules never read a duty that still carries a sector or duty times. */
+   and a day off, a leave or a duty with no times has no duty times either —
+   the roster app shows just the duty code on those rows. The values are
+   cleared as well, so the rules never read a duty that still carries a
+   sector or duty times. */
 function syncDutyFields(el){
   const code = (el.querySelector(".d-flight").value || "").trim().toUpperCase();
   const kind = dutyKindFromCode(code);
@@ -1048,10 +1067,12 @@ function syncDutyFields(el){
   };
   hide(".d-sector", kind !== "flight");
   const isOff = kind === "off";
-  hide(".d-start", isOff);
-  hide(".d-end", isOff);
-  /* a day off or leave shows only the duty code — its card fits the content */
-  el.classList.toggle("compact", isOff);
+  const noTimes = isOff || kind === "notime";
+  hide(".d-start", noTimes);
+  hide(".d-end", noTimes);
+  /* a day off, a leave or a duty with no times shows only the duty code —
+     its card fits the content */
+  el.classList.toggle("compact", noTimes);
   /* more than one sector means the duty and sector carry a chain */
   el.classList.toggle("multi", dutyCodes(code).length > 1);
 
@@ -1059,7 +1080,7 @@ function syncDutyFields(el){
     el.querySelector(".d-sector").value = "";
     el.dataset.block = "";
   }
-  if(isOff){
+  if(noTimes){
     el.querySelector(".d-start").value = "";
     el.querySelector(".d-end").value = "";
   }
@@ -2309,10 +2330,13 @@ function pdfCellsToRow(cells){
   const isDO = /^DO\b/.test(flightNo) || /^DO\b/.test(typeText);
   const isAL = /^AL\b/.test(typeText);
   const isAllDay = isDO || isAL;          /* no real duty times */
+  /* A duty with no times at all: a general duty, a no-duty assignment, a
+     briefing or a rest day. The roster prints no times for these either. */
+  const isNoTime = isNoTimeCode(duty);
   /* A flight duty is named by a flight number ("HB702"). Standby ("H04") and
      other duties ("A", "GD") carry a short code instead, even though the
      roster prints a duty window in their STD / STA columns. */
-  const isFlight = !isAllDay && looksLikeFlightNo(flightNo);
+  const isFlight = !isAllDay && !isNoTime && looksLikeFlightNo(flightNo);
 
   /* FROM + TO are printed as two columns */
   const sector = raw(cells.sector) ||
@@ -2330,8 +2354,9 @@ function pdfCellsToRow(cells){
 
   let dutyStart = "", dutyEnd = "", depOut = "", arrOut = "";
 
-  if(isAllDay){
-    /* placeholder 00:00 - 23:59 times are not a duty */
+  if(isAllDay || isNoTime){
+    /* placeholder 00:00 - 23:59 times are not a duty, and a duty with no
+       times carries none either */
   }else if(isFlight){
     depOut = std;
     arrOut = sta;
@@ -2348,8 +2373,10 @@ function pdfCellsToRow(cells){
     dutyEnd = sta;
   }
 
-  if(!dutyStart) dutyStart = timeStr(cells.start);
-  if(!dutyEnd) dutyEnd = timeStr(cells.end);
+  if(!isAllDay && !isNoTime){
+    if(!dutyStart) dutyStart = timeStr(cells.start);
+    if(!dutyEnd) dutyEnd = timeStr(cells.end);
+  }
 
   /* The duty period is the total time from duty start to duty end. */
   let dutyPeriod = "";
@@ -2357,11 +2384,11 @@ function pdfCellsToRow(cells){
     const mins = minutesApart(dutyStart, dutyEnd);
     if(mins !== null) dutyPeriod = rosterDuration(mins);
   }
-  if(!dutyPeriod) dutyPeriod = normaliseDuration(raw(cells.period));
+  if(!dutyPeriod && !isAllDay && !isNoTime) dutyPeriod = normaliseDuration(raw(cells.period));
 
   /* The block hour is read from the sheet — it is a local-time figure and
      cannot be derived from STD and STA alone. A day off has none. */
-  const blockHour = isAllDay ? "" : normaliseDuration(raw(cells.block));
+  const blockHour = (isAllDay || isNoTime) ? "" : normaliseDuration(raw(cells.block));
 
   /* a row with nothing in it is not a duty day */
   if(!date && !duty && !dutyStart) return null;
@@ -2378,7 +2405,7 @@ function pdfCellsToRow(cells){
     date,
     day: day,
     sd: raw(cells.sd),
-    type: isDO ? "DO" : "Flight",
+    type: isDO ? "DO" : (isNoTime ? "Duty" : "Flight"),
     noDepArr: !isFlight,
     start: dutyStart,
     end: dutyEnd,
@@ -2615,7 +2642,7 @@ function renderOcrRows(){
 
     /* once the duty code is confirmed, drop the figures that cannot apply to
        it: a standby or a day off has no sector, departure, arrival or block,
-       and a day off has no duty times either */
+       and a day off or a duty with no times has no duty times either */
     main.querySelector(".o-flight").addEventListener("change", () => {
       const kind = dutyKindFromCode(r.flight);
       main.dataset.kind = kind;
@@ -2631,7 +2658,7 @@ function renderOcrRows(){
         clear("block", "o-block");
         r.blockFollowsTimes = true;
       }
-      if(kind === "off"){
+      if(kind === "off" || kind === "notime"){
         clear("start", "o-start");
         clear("end", "o-end");
         clear("period", "o-period");
@@ -3444,6 +3471,7 @@ function rowDutyType(r){
   if(dutyVal === "DO" || dutyVal === "AL") return "DO";
   if(dutyVal === "STBY") return "Standby";
   if(r.type === "Standby" || r.standby) return "Standby";
+  if(isNoTimeCode(dutyVal)) return "Duty";
   return "Flight";
 }
 
