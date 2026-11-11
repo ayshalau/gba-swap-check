@@ -95,6 +95,10 @@ roster fields are filled from them like this:
   **Excel format**. If the PDF does not print the weekday, Day is taken from the date.
   Day and SD carry no extra meaning in a swap check, so neither is shown in the
   **Extracted Duty Days** editor; both are still read from the PDF and kept in the data.
+- The head of the **Roster Preview** carries the tally of the uploaded roster: the duty days and
+  the days off by code, for example *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL"*. `DO`, the rest day
+  `DO-R` and `AL` are each counted on their own, so the numbers add up to the days on the roster.
+  The tally is shown on a phone as well as on a desktop.
 
 The **Extracted Duty Days** rows show Date, Duty, Sector, Duty Start, Dep Time, Arr Time,
 Duty End, Duty Period and Block Hour. Times are entered as four digits (`0810`) and

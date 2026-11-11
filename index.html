@@ -653,6 +653,9 @@
     }
     /* the small screens get the roster editor, not a paragraph of instructions */
     .row-head .hint{display:none}
+    /* the tallies stay: how many rows were read and how many days off the
+       roster holds are the numbers a phone user needs as well */
+    .row-head .hint.tally{display:block}
     /* a smaller drop zone leaves more room for the rows below it */
     .drop-zone{padding:20px 14px}
     .dz-icon{font-size:24px;margin-bottom:4px}
@@ -780,7 +783,7 @@
     <div class="panel hidden" id="ocr-result-panel">
       <div class="row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Extracted Duty Days</span>
-        <span class="hint" id="ocr-count"></span>
+        <span class="hint tally" id="ocr-count"></span>
       </div>
 
       <div class="row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -807,7 +810,7 @@
     <div class="panel hidden" id="roster-pdf-panel">
       <div class="row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Roster Preview &amp; PDF</span>
-        <span class="hint" id="roster-pdf-count"></span>
+        <span class="hint tally" id="roster-pdf-count"></span>
       </div>
       <div class="grid-3" style="margin-bottom:14px">
         <label class="field">Crew Name (shown on the PDF)
@@ -3386,12 +3389,22 @@ function totalBlockHours(records){
 
 /* Count the duty days on a roster: DO and AL are days off, not duty, so they
    are not counted, and several flights on the same date are one duty day. */
+/* The days off in a roster record: a day off, the rest day DO-R and an annual
+   leave. Each one is a day of its own on the roster. */
+function rosterDayOffKind(duty){
+  const s = String(duty || "").trim().toUpperCase();
+  if(/^AL(\s|$)/.test(s)) return "al";
+  if(/^DO-R(\s|$)/.test(s)) return "dor";
+  if(/^DO(\s|$)/.test(s)) return "do";
+  return "";
+}
+
 function countRosterDutyDays(records){
   const seen = {};
   let count = 0;
   (records || []).forEach((rec, i) => {
-    const duty = String(rec.duty || "").trim().toUpperCase();
-    if(/^DO(\s|$)/.test(duty) || /^AL(\s|$)/.test(duty)) return;
+    /* a day off, a rest day and a leave are days off, not duty days */
+    if(rosterDayOffKind(rec.duty)) return;
     const key = rec.date || ("row" + i);
     if(seen[key]) return;
     seen[key] = true;
@@ -3736,6 +3749,17 @@ function currentRosterRecords(){
   return combineDutyDays(rows.map(ocrRowToRoster));
 }
 
+/* How many days off the roster holds, by code: a day off, the rest day DO-R
+   and an annual leave. Each one is a day of its own on the roster. */
+function countRosterDayOffs(records){
+  const out = { do:0, dor:0, al:0 };
+  (records || []).forEach(rec => {
+    const kind = rosterDayOffKind(rec.duty);
+    if(kind) out[kind]++;
+  });
+  return out;
+}
+
 function renderRosterPreview(records){
   const t = document.getElementById("roster-preview");
   if(!records.length){
@@ -3752,7 +3776,7 @@ function renderRosterPreview(records){
       const val = rosterDisplayValue(r, c.key);
       let cls = c.align === "center" ? "c" : "";
       if(c.key === "duty"){
-        if(/^DO$/i.test(val)) cls += " do";
+        if(rosterDayOffKind(val)) cls += " do";
         else if(/^STBY$/i.test(val)) cls += " stby";
       }
       if(c.key === "date" || c.key === "dutyStart" || c.key === "depTime" ||
@@ -3770,7 +3794,13 @@ function renderRosterPreview(records){
     '</tr></tfoot>';
 
   t.innerHTML = head + body + foot;
-  document.getElementById("roster-pdf-count").textContent = countRosterDutyDays(records) + " duty day(s)";
+  /* the header carries the tally: the duty days, then the days off by code */
+  const off = countRosterDayOffs(records);
+  const offText = (off.do + off.dor + off.al)
+    ? " · " + off.do + " DO · " + off.dor + " DO-R · " + off.al + " AL"
+    : "";
+  document.getElementById("roster-pdf-count").textContent =
+    countRosterDutyDays(records) + " duty day(s)" + offText;
 }
 
 function refreshRosterPdfPanel(){
