@@ -981,6 +981,9 @@ const DEFAULT_RULES = [
     text:"Or exceed <b>210 hours in any consecutive 28 days</b>." },
 
   /* --- 6. Days Off Entitlement --- */
+  { group:"6. Days Off Entitlement", id:"minDo7", on:true, label:"Minimum Days Off in Any 7 Days",
+    value:1, unit:"days", numeric:true,
+    text:"Cabin crew shall have a minimum of <b>1 Day Off</b> in any <b>7 consecutive days</b>." },
   { group:"6. Days Off Entitlement", id:"minConsecDo14", on:true, label:"Consecutive Days Off in Any 14 Days",
     value:2, unit:"days", numeric:true,
     text:"Cabin crew shall have <b>2 consecutive Days Off</b> in any <b>14 consecutive days</b> following the previous 2 consecutive Days Off." },
@@ -1551,6 +1554,7 @@ function dayHours(d){
       ii)  shall have a minimum of 7 Days Off in any consecutive 28 days, and
       iii) shall have an average of at least 8 Days Off in each consecutive
            28 days period, averaged over three such periods."
+   and, in addition, a minimum of 1 Day Off in any consecutive 7 days.
 
    These are roster rules, not swap rules, so they are measured on every duty
    day on the form for this crew member — a swap is judged against the days
@@ -1594,20 +1598,52 @@ function checkDaysOffEntitlement(crew, who, issues){
     return out;
   };
 
+  /* the window of that length with the fewest days off, or null when the form
+     does not cover a whole window of that length */
+  const worstWindow = (len) => {
+    let worst = null;
+    runs.forEach(r => {
+      for(let i = 0; i + len <= r.length; i++){
+        const w = windowOf(r[i], len);
+        if(!w) continue;
+        const off = w.filter(x => x.off).length;
+        if(!worst || off < worst.off) worst = { off, start: w[0].iso, end: w[len-1].iso };
+      }
+    });
+    return worst;
+  };
+
+  /* the window of that length with the shortest run of consecutive days off */
+  const worstRun = (len) => {
+    let worst = null;
+    runs.forEach(r => {
+      for(let i = 0; i + len <= r.length; i++){
+        const w = windowOf(r[i], len);
+        if(!w) continue;
+        let cur = 0, best = 0;
+        w.forEach(x => { cur = x.off ? cur + 1 : 0; best = Math.max(best, cur); });
+        if(!worst || best < worst.best) worst = { best, start: w[0].iso, end: w[len-1].iso };
+      }
+    });
+    return worst;
+  };
+
+  /* Rule 6 — at least 1 day off in any 7 days */
+  if(ruleOn("minDo7")){
+    const need = ruleNum("minDo7", 1);
+    const win = 7;
+    const worst = worstWindow(win);
+    if(worst && worst.off < need){
+      issues.push({ ok:false, who, text:who+": "+worst.off+" day(s) off between "+fmtDate(worst.start)+" and "+fmtDate(worst.end)+
+        " ("+win+" days) — below the minimum of "+need+" day(s) off in any "+win+" days." });
+    }
+  }
+
   /* Rule 6 (i) — 2 consecutive days off in any 14 days */
   if(ruleOn("minConsecDo14")){
     const need = ruleNum("minConsecDo14", 2);
     const win = 14;
-    let worst = null;
-    runs.forEach(r => {
-      for(let i = 0; i + win <= r.length; i++){
-        const w = windowOf(r[i], win);
-        if(!w) continue;
-        let cur = 0, best = 0;
-        w.forEach(x => { cur = x.off ? cur + 1 : 0; best = Math.max(best, cur); });
-        if(!worst || best < worst.best) worst = { best, start: w[0].iso, end: w[win-1].iso };
-      }
-    });
+    const worst = worstRun(win);
     if(worst && worst.best < need){
       issues.push({ ok:false, who, text:who+": the longest run of consecutive days off between "+fmtDate(worst.start)+" and "+fmtDate(worst.end)+
         " ("+win+" days) is "+worst.best+" — the rule needs "+need+" consecutive days off in any "+win+" days." });
@@ -1618,15 +1654,7 @@ function checkDaysOffEntitlement(crew, who, issues){
   if(ruleOn("minDo28")){
     const need = ruleNum("minDo28", 7);
     const win = 28;
-    let worst = null;
-    runs.forEach(r => {
-      for(let i = 0; i + win <= r.length; i++){
-        const w = windowOf(r[i], win);
-        if(!w) continue;
-        const off = w.filter(x => x.off).length;
-        if(!worst || off < worst.off) worst = { off, start: w[0].iso, end: w[win-1].iso };
-      }
-    });
+    const worst = worstWindow(win);
     if(worst && worst.off < need){
       issues.push({ ok:false, who, text:who+": "+worst.off+" day(s) off between "+fmtDate(worst.start)+" and "+fmtDate(worst.end)+
         " ("+win+" days) — below the minimum of "+need+" days off in any "+win+" days." });

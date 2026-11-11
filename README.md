@@ -9,7 +9,7 @@ Offline-first PWA for validating crew shift and duty swap requests against GBA r
 
 - **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
 - **Roster Import** — upload a roster PDF and read it in the browser. Duty days are extracted as editable rows, then added to a swap request in one click. The file is never uploaded to a server.
-- **Rules** - all 30 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
+- **Rules** - all 31 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
 - **Records** - every check is saved with its result and findings; filter by result, search, load back into the form, delete, or export to CSV.
 
 ## Roster import
@@ -404,6 +404,7 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 > three such periods.
 
 - The first sentence is the **6 consecutive days on duty** rule in group 3.
+- **A minimum of 1 Day Off in any 7 days** — every 7-day stretch must hold at least one day off.
 - **2 consecutive Days Off in any 14 days** — the longest run of days off in any 14-day stretch must
   be at least 2.
 - **At least 7 Days Off in any 28 days** — every 28-day stretch must hold 7 days off.
