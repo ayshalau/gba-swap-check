@@ -46,7 +46,7 @@ The GBA roster this is built for has these columns:
   UTC and is ignored.
 - `TYPE OF DUTY` carries the duty code: `OP - (FA4)` for a flight, `STB - H04` for
   standby, `OTH - A` / `OTH - GD` for other duties, and `DO` / `AL` for a day off or
-  leave.
+  leave. The rest day `DO-R` is read as a day off as well.
 - `S NO` and `REMARK` are ignored.
 
 If the PDF has no text layer (a scan), the reader says so — the PDF must contain
@@ -81,10 +81,14 @@ roster fields are filled from them like this:
 - Standby (`STB - H04`) fills Duty Start from STD and Duty End from STA, with no Dep Time,
   Arr Time or Block Hour. `DO` and `AL` leave every time blank. A standby is added to the swap
   request as a **Standby** duty, so the standby rules apply to it.
-- A duty with no times at all — `DUTY`, `NDA`, `NB` and `DO-R` — is added to the request as a
+- A duty with no times at all — `DUTY`, `NDA` and `NB` — is added to the request as a
   **Duty**: it carries no sector, no duty start and no duty end, and its card shows the duty
   code on its own. The rules still count it as a duty day, but the time-based rules skip it
   because it has no times.
+- The rest day `DO-R` (written `DOR` on some sheets) **counts as a Day Off**, the same as `DO`
+  and `AL`: it is added to the request as a **Day Off**, with no sector and no duty times, it
+  counts towards the days off entitlement, and the roster sheet keeps the printed code `DO-R` so
+  the rest day is still recognisable.
 - A two-sector duty day is one duty: Duty Start on the first sector row, Duty End and the
   total Duty Period on the last row, with the duty cells in between left blank.
 - Whatever headings the uploaded PDF uses, the imported roster is always shown in the
@@ -416,11 +420,12 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
   total days off must be at least 24. When the form does not hold three full periods yet, the
   average is taken over the whole periods that are there and the finding is shown as a **warning**,
   not a failure.
-- These three are **roster rules**, so they are measured on every duty day on the form for that crew
+- These are **roster rules**, so they are measured on every duty day on the form for that crew
   member, not only on the ticked days — a swap is judged against the days around it. A window is
   only looked at when the form holds a card for **every day in it**, so a form that is only partly
-  filled is never judged on it, and an **annual leave counts as a day off**, like a DO.
-- The old **Maximum Consecutive Days Off (4)** rule was replaced by these three.
+  filled is never judged on it. **A day off, an annual leave and the rest day `DO-R` all count as
+  a day off.**
+- The old **Maximum Consecutive Days Off (4)** rule was replaced by these four.
 
 ## Running
 

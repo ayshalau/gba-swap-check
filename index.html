@@ -1201,12 +1201,20 @@ function updateDutyDateLabel(el){
   dom.textContent = String(d.getDate());
 }
 
-/* The duty type is worked out from the duty code: "DO" and "AL" are days off,
-   a standby code (H04, H14) is a standby, anything else is a flight. */
+/* The duty type is worked out from the duty code: "DO", "AL" and the rest day
+   "DO-R" are days off, a standby code (H04, H14) is a standby, anything else is
+   a flight. */
 /* A card can hold more than one sector: "HB 702 → HB 703". The kind is taken
    from the first code that means something. */
 function dutyCodes(code){
   return String(code || "").split(/→/).map(s => s.trim()).filter(Boolean);
+}
+
+/* The codes that are a day off: a day off, an annual leave and the rest day
+   DO-R (written DOR on some sheets). They all count as days off. */
+function isDayOffCode(code){
+  const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
+  return s === "DO" || s === "AL" || s === "DO-R" || s === "DOR";
 }
 
 function dutyTypeFromCode(code){
@@ -1218,25 +1226,26 @@ function dutyTypeFromCode(code){
 }
 
 /* Some duty codes carry no duty times at all: a general duty, a no-duty
-   assignment, a briefing and a rest day. Their card shows the duty code on
-   its own, with no duty start and no duty end. */
+   assignment and a briefing. Their card shows the duty code on its own, with
+   no duty start and no duty end. The rest day DO-R is a day off, so it is
+   handled with the other days off and not here. */
 function isNoTimeCode(code){
   const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
-  return s === "DUTY" || s === "NDA" || s === "NB" || s === "DO-R" || s === "DOR";
+  return s === "DUTY" || s === "NDA" || s === "NB";
 }
 
 /* What kind of duty the code names:
      flight   — a flight number (HB 702)
      standby  — a standby code (H04, H14)
      other    — another ground duty (A, GD)
-     off      — a day off or a leave (DO, AL)
-     notime   — a duty with no duty times (DUTY, NDA, NB, DO-R) */
+     off      — a day off, a leave or a rest day (DO, AL, DO-R)
+     notime   — a duty with no duty times (DUTY, NDA, NB) */
 function dutyKindFromCode(code){
   const codes = dutyCodes(code);
   if(!codes.length) return "flight";                 /* nothing typed yet */
   for(const c of codes){
     const s = c.toUpperCase();
-    if(s === "DO" || s === "AL") return "off";
+    if(isDayOffCode(s)) return "off";
     if(isNoTimeCode(s)) return "notime";
     if(/^H\d{2}$/.test(s)) return "standby";
     if(/^(STB|STBY)/.test(s)) return "standby";
@@ -2752,11 +2761,11 @@ function pdfCellsToRow(cells){
     duty = dash !== -1 ? typeText.slice(dash + 3).trim() : typeText;
   }
 
-  const isDO = /^DO\b/.test(flightNo) || /^DO\b/.test(typeText);
+  const isDO = isDayOffCode(flightNo) || isDayOffCode(duty) || /^DO\b/.test(typeText);
   const isAL = /^AL\b/.test(typeText);
   const isAllDay = isDO || isAL;          /* no real duty times */
-  /* A duty with no times at all: a general duty, a no-duty assignment, a
-     briefing or a rest day. The roster prints no times for these either. */
+  /* A duty with no times at all: a general duty, a no-duty assignment or a
+     briefing. The roster prints no times for these either. */
   const isNoTime = isNoTimeCode(duty);
   /* A flight duty is named by a flight number ("HB702"). Standby ("H04") and
      other duties ("A", "GD") carry a short code instead, even though the
@@ -3318,11 +3327,14 @@ function ocrRowToRoster(r){
   const hasDepArr = !!r.dep && !!r.arr;
   /* a standby or other non-flight duty has no departure / arrival at all */
   const noDepArr = !!r.noDepArr;
+  /* the printed code is kept as it is — a rest day stays "DO-R" in the sheet
+     even though it counts as a day off */
+  const dutyOut = isDO ? (dutyVal || "DO") : (r.flight || (isStby ? "STBY" : ""));
   return buildRosterRecord({
     date: r.date,
     day: r.day || "",
     sd: r.sd || "",
-    duty: isDO ? "DO" : (r.flight || (isStby ? "STBY" : "")),
+    duty: dutyOut,
     sector: hasSector ? r.sector : (isStby ? (r.flight || "") : ""),
     dutyStart: r.start,
     dutyEnd: r.end,
@@ -3899,7 +3911,8 @@ document.getElementById("ocr-clear").addEventListener("click", () => {
 /* The type of an imported row — the duty column decides it. */
 function rowDutyType(r){
   const dutyVal = (r.flight || "").toUpperCase();
-  if(dutyVal === "DO" || dutyVal === "AL") return "DO";
+  /* a day off, an annual leave and the rest day DO-R are all days off */
+  if(isDayOffCode(dutyVal)) return "DO";
   if(dutyVal === "STBY") return "Standby";
   if(r.type === "Standby" || r.standby) return "Standby";
   if(isNoTimeCode(dutyVal)) return "Duty";
