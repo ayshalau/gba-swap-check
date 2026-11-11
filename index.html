@@ -468,10 +468,15 @@
   }
   @media (max-width:560px){
     .grid-3{grid-template-columns:1fr}
-    /* the date gets a column of its own, exactly wide enough for a whole
-       date and its picker, so it lines up with the fields underneath */
-    .ocr-row{grid-template-columns:128px minmax(0,1fr)}
-    .ocr-row .o-date{padding:8px 6px}
+    /* the date takes the same column as the duty start and every other field,
+       so the whole row sits on one grid */
+    .ocr-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+    /* the date needs the room: the padding is trimmed and the picker icon is
+       drawn smaller, so a whole "03/11/2026" still fits its column */
+    .ocr-row .o-date{padding:8px 4px}
+    .ocr-row .o-date::-webkit-calendar-picker-indicator{
+      width:14px;height:14px;padding:0;margin-left:0;
+    }
     /* the card is a two-column grid: duty and sector take a line each, the
        figures pair up, and the remove button sits in the date strip */
     .duty-card{grid-area:card;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}

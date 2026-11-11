@@ -261,11 +261,12 @@ The app is built to work on a phone as well as a desktop, and is installable:
   second. A day off is the duty code alone. A phone uses the same stack, with the date strip
   above it.
 - The roster rows are a wide table on a desktop and become a **labelled form** on a narrow one —
-  each field carries its own name, so nothing is left to guess. The date has a column of its own,
-  exactly wide enough for a whole date and its picker, and sits beside the duty code; the sector
-  takes a line of its own, and the figures pair up underneath: Duty Start with Duty End, Dep with
-  Arr, Period with Block. On a tablet the date, duty and sector share the first line, all three
-  the same width.
+  each field carries its own name, so nothing is left to guess. Every field sits in the same
+  column, including the date: on a phone the date shares the first line with the duty code and
+  is the same width as Duty Start, Dep Time and the rest, so the whole row is on one grid. The
+  sector takes a line of its own, and the figures pair up underneath: Duty Start with Duty End,
+  Dep with Arr, Period with Block. On a tablet the date, duty and sector share the first line,
+  all three the same width.
 - A row shows only the fields that can apply to its duty code, so a **day off is just a date
   and a duty code** instead of seven empty boxes. A standby keeps its start, end and period.
   The values are cleared when the code is confirmed, so the preview and the export stay honest.
