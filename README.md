@@ -209,6 +209,11 @@ swap check. The tick is on by default, and the header of each crew member shows 
 are ticked with a button to **Select all** or **Clear** them. The selection is saved with the
 record and restored when it is loaded back into the form.
 
+Days that cannot be ticked — an annual leave while that rule is on — are left out of the count
+and out of the **Select all** / **Clear** button, so the button always says what it will do:
+*"23 of 23 selected · 7 leave"* with **Clear** means the 23 swappable days are all ticked and
+the button unticks them.
+
 The header of the panel shows the totals, for example *"2 crew member(s) · 60 duty day(s) ·
 32 selected"*, and the verdict repeats how many days were checked.
 

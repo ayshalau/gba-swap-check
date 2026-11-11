@@ -1273,11 +1273,24 @@ function deriveBlockHours(startHm, endHm){
 function updateSelCount(crewEl){
   if(!crewEl) return;
   const boxes = [...crewEl.querySelectorAll(".d-check")];
-  const on = boxes.filter(b => b.checked).length;
+  /* a locked day (an annual leave) can never be ticked, so it is left out of
+     the count and out of the select all / clear button — otherwise the button
+     would say "Select all" while it was about to clear the days that were
+     already selected */
+  const free = boxes.filter(b => !b.disabled);
+  const on = free.filter(b => b.checked).length;
+  const locked = boxes.length - free.length;
   const count = crewEl.querySelector(".sel-count");
-  if(count) count.textContent = boxes.length ? (on + " of " + boxes.length + " selected") : "";
+  if(count){
+    count.textContent = boxes.length
+      ? (on + " of " + free.length + " selected" + (locked ? " · " + locked + " leave" : ""))
+      : "";
+  }
   const btn = crewEl.querySelector(".sel-all");
-  if(btn) btn.textContent = (boxes.length && on === boxes.length) ? "Clear" : "Select all";
+  if(btn){
+    btn.textContent = (free.length && on === free.length) ? "Clear" : "Select all";
+    btn.disabled = !free.length;
+  }
 }
 
 /* A summary of the request: how many crew members, how many duty days, and
