@@ -50,12 +50,12 @@
     background:linear-gradient(180deg,#b5e6e9,var(--bg));
     padding:18px 22px 0;
   }
-  .brand-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;max-width:1180px;margin:0 auto;padding-bottom:14px}
+  .brand-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;max-width:1260px;margin:0 auto;padding-bottom:14px}
   .brand-id{display:flex;align-items:center;gap:12px}
   .brand-logo{width:74px;height:53px;object-fit:contain;display:block;flex:0 0 auto}
   .logotype{font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:700;letter-spacing:.06em;color:var(--gold-soft)}
   .brand-sub{font-size:12px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-top:2px}
-  nav{display:flex;gap:2px;max-width:1180px;margin:0 auto;overflow-x:auto}
+  nav{display:flex;gap:2px;max-width:1260px;margin:0 auto;overflow-x:auto}
   nav button{
     appearance:none;background:transparent;border:none;cursor:pointer;
     color:var(--muted);font-family:inherit;font-size:14px;
@@ -65,7 +65,7 @@
   nav button.active{color:var(--gold-soft);border-bottom-color:var(--accent)}
 
   /* ---------- layout ---------- */
-  main{flex:1;width:100%;max-width:1180px;margin:0 auto;padding:26px 22px 60px}
+  main{flex:1;width:100%;max-width:1260px;margin:0 auto;padding:26px 22px 60px}
   section.view{display:none}
   section.view.active{display:block}
 
@@ -77,6 +77,8 @@
     box-shadow:var(--shadow);
   }
   .panel + .panel{margin-top:16px}
+  /* the crew panels hold a whole duty card, so they use a little less padding */
+  #view-check .panel{padding:16px}
   .panel-title{font-size:17px;margin-bottom:14px;color:var(--ink)}
   .hint{color:var(--muted);font-size:13px}
   .muted{color:var(--muted)}
@@ -124,7 +126,7 @@
   .party-head .who .tag{display:block;font-size:11px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;font-weight:500}
   /* the name field and the buttons beside it */
   .party-ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0;flex:1 1 auto}
-  .party-body{padding:14px 16px}
+  .party-body{padding:14px 12px}
   /* the crew member name field */
   .party-head .c-name{
     background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);
@@ -146,7 +148,7 @@
   .duty-day[data-selected="0"] .duty-card,
   .duty-day[data-selected="0"] .duty-date{opacity:.4}
   .duty-date{
-    position:relative;flex:0 0 46px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    position:relative;flex:0 0 42px;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:1px;padding:8px 2px;border-radius:10px;
     background:var(--panel-2);border:1px solid var(--line);cursor:pointer;
   }
@@ -340,7 +342,7 @@
 
   /* ---------- misc ---------- */
   footer{border-top:1px solid var(--line);padding:14px 22px;background:var(--panel)}
-  .footer-inner{max-width:1180px;margin:0 auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .footer-inner{max-width:1260px;margin:0 auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .footer-inner .grow{flex:1}
   .footer-note{font-size:12px;color:var(--muted)}
 
@@ -369,6 +371,10 @@
   .empty .big{font-size:34px;margin-bottom:8px;font-family:Arial,Helvetica,sans-serif;font-weight:700;color:var(--gold-soft)}
 
   /* ---------- responsive ---------- */
+  @media (min-width:1600px){
+    /* a big screen gets a wider app, so the duty cards have more room */
+    main,.brand-row,nav,.footer-inner{max-width:1400px}
+  }
   @media (max-width:1024px){
     header{padding:14px 16px 0}
     main{padding:20px 16px 48px}
@@ -469,6 +475,24 @@
     .duty-card .f-start{grid-column:3;grid-row:1}
     .duty-card .f-end{grid-column:4;grid-row:1}
     .duty-card .row-del{grid-column:5;grid-row:1}
+    .duty-day.multi .duty-card .f-duty{grid-column:1/5;grid-row:1}
+    .duty-day.multi .duty-card .f-sector{grid-column:1/3;grid-row:2}
+    .duty-day.multi .duty-card .f-start{grid-column:3;grid-row:2}
+    .duty-day.multi .duty-card .f-end{grid-column:4;grid-row:2}
+  }
+  @media (min-width:1250px){
+    /* a wide screen has room for one line: duty, sector and the two duty
+       times side by side, with the remove button at the end */
+    .duty-card{
+      grid-template-columns:minmax(84px,1fr) minmax(84px,1fr) minmax(112px,.9fr) minmax(112px,.9fr) 32px;
+      gap:8px;
+    }
+    .duty-card .f-duty{grid-column:1;grid-row:1}
+    .duty-card .f-sector{grid-column:2;grid-row:1}
+    .duty-card .f-start{grid-column:3;grid-row:1}
+    .duty-card .f-end{grid-column:4;grid-row:1}
+    .duty-card .row-del{grid-column:5;grid-row:1}
+    /* a chained duty keeps its own line, and the times sit under the sector */
     .duty-day.multi .duty-card .f-duty{grid-column:1/5;grid-row:1}
     .duty-day.multi .duty-card .f-sector{grid-column:1/3;grid-row:2}
     .duty-day.multi .duty-card .f-start{grid-column:3;grid-row:2}
@@ -1131,8 +1155,8 @@ function addDutyDay(crewEl, data){
       '<input type="date" class="d-date" aria-label="Duty date" value="'+esc(d.date||"")+'">' +
     '</div>' +
     '<div class="duty-card">' +
-      '<label class="f-duty">Duty<input type="text" class="d-flight" placeholder="e.g. HB 702" value="'+esc(d.flight||"")+'"></label>' +
-      '<label class="f-sector">Sector<input type="text" class="d-sector" placeholder="e.g. HKG TPE" value="'+esc(d.sector||"")+'"></label>' +
+      '<label class="f-duty">Duty<input type="text" class="d-flight" placeholder="HB 702" value="'+esc(d.flight||"")+'"></label>' +
+      '<label class="f-sector">Sector<input type="text" class="d-sector" placeholder="HKG TPE" value="'+esc(d.sector||"")+'"></label>' +
       '<label class="f-start"><span class="lbl-text">Duty Start</span><input type="time" class="d-start" value="'+esc(d.start||"")+'"></label>' +
       '<label class="f-end"><span class="lbl-text">Duty End</span><input type="time" class="d-end" value="'+esc(d.end||"")+'"></label>' +
       '<button class="row-del" title="Remove duty day" aria-label="Remove duty day">×</button>' +
