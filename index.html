@@ -727,8 +727,8 @@
     <div class="hint" id="hdr-hint"></div>
   </div>
   <nav>
-    <button data-view="import">Roster Import</button>
-    <button class="active" data-view="check">Swap Check</button>
+    <button class="active" data-view="import">Roster Import</button>
+    <button data-view="check">Swap Check</button>
     <button data-view="rules">Rules</button>
     <button data-view="records">Records</button>
   </nav>
@@ -736,7 +736,7 @@
 
 <main>
   <!-- ============ SWAP CHECK ============ -->
-  <section class="view active" id="view-check">
+  <section class="view" id="view-check">
     <div class="panel">
       <div class="row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Crew Members &amp; Duty Days</span>
@@ -755,7 +755,7 @@
   </section>
 
   <!-- ============ ROSTER IMPORT (PDF) ============ -->
-  <section class="view" id="view-import">
+  <section class="view active" id="view-import">
     <div class="panel">
       <div class="panel-title">Roster Import</div>
 
@@ -769,7 +769,7 @@
       </div>
 
       <div class="row-actions">
-        <button class="btn btn-ghost" id="ocr-clear">Clear</button>
+        <button class="btn btn-ghost hidden" id="ocr-clear">Clear</button>
       </div>
 
       <div id="ocr-progress" class="ocr-progress hidden">
@@ -3724,6 +3724,8 @@ async function runPdfImport(file){
     }
 
     document.getElementById("ocr-result-panel").classList.remove("hidden");
+    /* the Clear button only makes sense once something has been read */
+    document.getElementById("ocr-clear").classList.remove("hidden");
     renderOcrRows();
     refreshRosterPdfPanel();
     ocrSetStatus("Done — " + ocrRows.length + " row(s) read from the PDF", 100);
@@ -3934,6 +3936,7 @@ document.getElementById("ocr-clear").addEventListener("click", () => {
   document.getElementById("ocr-rows").innerHTML = "";
   document.getElementById("roster-preview").innerHTML = "";
   document.getElementById("roster-pdf-count").textContent = "";
+  document.getElementById("ocr-clear").classList.add("hidden");
   toast("Import cleared");
 });
 

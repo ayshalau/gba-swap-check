@@ -7,6 +7,9 @@ Offline-first PWA for validating crew shift and duty swap requests against GBA r
 
 ## Features
 
+The app opens on the **Roster Import** tab — upload the roster PDF first, then build the swap
+request from it.
+
 - **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
 - **Roster Import** — upload a roster PDF and read it in the browser. Duty days are extracted as editable rows, then added to a swap request in one click. The file is never uploaded to a server.
 - **Rules** - all 32 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
