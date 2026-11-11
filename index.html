@@ -258,6 +258,8 @@
   .verdict li{margin-bottom:5px}
   .verdict li.pass{color:var(--good)}
   .verdict li.fail{color:var(--danger)}
+  /* a note that does not fail the request on its own */
+  .verdict li.warn{color:var(--warn)}
   .verdict .sec{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:14px;font-weight:700}
   .verdict .sec:first-of-type{margin-top:12px}
 
@@ -978,10 +980,16 @@ const DEFAULT_RULES = [
     value:210, unit:"h", numeric:true,
     text:"Or exceed <b>210 hours in any consecutive 28 days</b>." },
 
-  /* --- 6. Maximum Consecutive Days Off --- */
-  { group:"6. Maximum Consecutive Days Off (DO)", id:"maxConsecDo", on:true, label:"Maximum Consecutive Days Off",
-    value:4, unit:"days", numeric:true,
-    text:"The maximum number of consecutive DO allowed is <b>4</b>." }
+  /* --- 6. Days Off Entitlement --- */
+  { group:"6. Days Off Entitlement", id:"minConsecDo14", on:true, label:"Consecutive Days Off in Any 14 Days",
+    value:2, unit:"days", numeric:true,
+    text:"Cabin crew shall have <b>2 consecutive Days Off</b> in any <b>14 consecutive days</b> following the previous 2 consecutive Days Off." },
+  { group:"6. Days Off Entitlement", id:"minDo28", on:true, label:"Minimum Days Off in Any 28 Days",
+    value:7, unit:"days", numeric:true,
+    text:"Cabin crew shall have a minimum of <b>7 Days Off</b> in any <b>28 consecutive days</b>." },
+  { group:"6. Days Off Entitlement", id:"avgDo28", on:true, label:"Average Days Off per 28 Days (Three Periods)",
+    value:8, unit:"days", numeric:true,
+    text:"Cabin crew shall have an <b>average of at least 8 Days Off</b> in each consecutive 28-day period, averaged over three such periods (84 days)." }
 ];
 
 let state = load() || { records:[] };
@@ -1036,6 +1044,13 @@ function daysBetween(a, b){
   const d1 = new Date(a + "T00:00:00"), d2 = new Date(b + "T00:00:00");
   if(isNaN(d1) || isNaN(d2)) return null;
   return Math.round((d2 - d1) / 86400000);
+}
+/* the date n days after an ISO date, in the same format */
+function addDaysISO(iso, n){
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d)) return null;
+  d.setDate(d.getDate() + n);
+  return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
 }
 /* minutes since midnight for an "HH:MM" string */
 function hmToMin(hm){
@@ -1526,12 +1541,146 @@ function dayHours(d){
   return h === null ? null : h;
 }
 
+/* ============================================================
+   DAYS OFF ENTITLEMENT
+   ------------------------------------------------------------
+   "Cabin Crew shall not be rostered for duty on more than 6 consecutive days
+    between Days Off; but
+      i)   shall have 2 consecutive Days Off in any consecutive 14 days
+           following the previous 2 consecutive Days Off, and
+      ii)  shall have a minimum of 7 Days Off in any consecutive 28 days, and
+      iii) shall have an average of at least 8 Days Off in each consecutive
+           28 days period, averaged over three such periods."
+
+   These are roster rules, not swap rules, so they are measured on every duty
+   day on the form for this crew member — a swap is judged against the days
+   around it. Two safeguards keep them honest:
+     • a window is only looked at when the form holds a card for every day in
+       it, so a form that is only partly filled is never judged on it, and
+     • an annual leave counts as a day off, like a DO.
+   ============================================================ */
+function checkDaysOffEntitlement(crew, who, issues){
+  const days = (crew.allDuties||[]).filter(d => d.date);
+  if(!days.length) return;
+
+  /* one entry per calendar date: a day is off when it is a DO or a leave */
+  const map = new Map();
+  days.forEach(d => {
+    const off = d.type === "DO";
+    const cur = map.get(d.date);
+    map.set(d.date, cur === undefined ? off : (cur || off));
+  });
+  const dates = [...map.keys()].sort();
+  if(!dates.length) return;
+
+  /* the stretches of days the form covers, one day after another */
+  const runs = [];
+  let run = [dates[0]];
+  for(let i = 1; i < dates.length; i++){
+    if(daysBetween(dates[i-1], dates[i]) === 1) run.push(dates[i]);
+    else { runs.push(run); run = [dates[i]]; }
+  }
+  runs.push(run);
+
+  /* the days of a window starting on startISO, or null when the form does not
+     cover every one of them */
+  const windowOf = (startISO, len) => {
+    const out = [];
+    for(let i = 0; i < len; i++){
+      const iso = addDaysISO(startISO, i);
+      if(!map.has(iso)) return null;
+      out.push({ iso, off: map.get(iso) });
+    }
+    return out;
+  };
+
+  /* Rule 6 (i) — 2 consecutive days off in any 14 days */
+  if(ruleOn("minConsecDo14")){
+    const need = ruleNum("minConsecDo14", 2);
+    const win = 14;
+    let worst = null;
+    runs.forEach(r => {
+      for(let i = 0; i + win <= r.length; i++){
+        const w = windowOf(r[i], win);
+        if(!w) continue;
+        let cur = 0, best = 0;
+        w.forEach(x => { cur = x.off ? cur + 1 : 0; best = Math.max(best, cur); });
+        if(!worst || best < worst.best) worst = { best, start: w[0].iso, end: w[win-1].iso };
+      }
+    });
+    if(worst && worst.best < need){
+      issues.push({ ok:false, who, text:who+": the longest run of consecutive days off between "+fmtDate(worst.start)+" and "+fmtDate(worst.end)+
+        " ("+win+" days) is "+worst.best+" — the rule needs "+need+" consecutive days off in any "+win+" days." });
+    }
+  }
+
+  /* Rule 6 (ii) — at least 7 days off in any 28 days */
+  if(ruleOn("minDo28")){
+    const need = ruleNum("minDo28", 7);
+    const win = 28;
+    let worst = null;
+    runs.forEach(r => {
+      for(let i = 0; i + win <= r.length; i++){
+        const w = windowOf(r[i], win);
+        if(!w) continue;
+        const off = w.filter(x => x.off).length;
+        if(!worst || off < worst.off) worst = { off, start: w[0].iso, end: w[win-1].iso };
+      }
+    });
+    if(worst && worst.off < need){
+      issues.push({ ok:false, who, text:who+": "+worst.off+" day(s) off between "+fmtDate(worst.start)+" and "+fmtDate(worst.end)+
+        " ("+win+" days) — below the minimum of "+need+" days off in any "+win+" days." });
+    }
+  }
+
+  /* Rule 6 (iii) — an average of 8 days off per 28 days, over three periods */
+  if(ruleOn("avgDo28")){
+    const need = ruleNum("avgDo28", 8);
+    const win = 28, periods = 3;
+    let worstFull = null;   /* three whole periods on the form */
+    let worstPart = null;   /* fewer periods on the form */
+    runs.forEach(r => {
+      /* three full periods of 28 days — the rule as written */
+      for(let i = 0; i + win * periods <= r.length; i++){
+        const w = windowOf(r[i], win * periods);
+        if(!w) continue;
+        const off = w.filter(x => x.off).length;
+        const avg = off / periods;
+        if(!worstFull || avg < worstFull.avg) worstFull = { avg, start: w[0].iso, end: w[w.length-1].iso, periods };
+      }
+      /* fewer than three periods on the form: average over the whole periods
+         that are there, so a single month is still given a reading */
+      const whole = Math.floor(r.length / win);
+      if(whole >= 1 && whole < periods){
+        for(let i = 0; i + win * whole <= r.length; i++){
+          const w = windowOf(r[i], win * whole);
+          if(!w) continue;
+          const off = w.filter(x => x.off).length;
+          const avg = off / whole;
+          if(!worstPart || avg < worstPart.avg) worstPart = { avg, start: w[0].iso, end: w[w.length-1].iso, periods: whole };
+        }
+      }
+    });
+    if(worstFull && worstFull.avg < need){
+      issues.push({ ok:false, who, text:who+": "+round2(worstFull.avg)+" day(s) off per 28 days between "+fmtDate(worstFull.start)+" and "+fmtDate(worstFull.end)+
+        " (averaged over "+worstFull.periods+" periods) — below the required "+need+"." });
+    } else if(!worstFull && worstPart && worstPart.avg < need){
+      /* the form does not hold three periods yet, so this is a reading, not a
+         failure — it does not reject the request on its own */
+      issues.push({ ok:true, warn:true, who, text:who+": "+round2(worstPart.avg)+" day(s) off per 28 days between "+fmtDate(worstPart.start)+" and "+fmtDate(worstPart.end)+
+        " (averaged over "+worstPart.periods+" of "+periods+" periods on the form) — the rule needs "+need+", but a full three periods are not on the form yet." });
+    }
+  }
+}
+
 function validate(data){
   const issues = [];
   /* Only the ticked duty days are checked — the rest of the roster stays on
-     the form but is left out of the rules. */
+     the form but is left out of the rules. The days off entitlement is the
+     exception: it is a roster rule, so it is measured on the whole form. */
   const crews = (data.crews || []).map(c => Object.assign({}, c, {
-    duties: (c.duties||[]).filter(d => d.date && d.selected !== false)
+    duties: (c.duties||[]).filter(d => d.date && d.selected !== false),
+    allDuties: (c.duties||[]).filter(d => d.date)
   })).filter(c => c.name || c.duties.length);
 
   if(!crews.length){
@@ -1730,20 +1879,8 @@ function validate(data){
       }
     }
 
-    /* Rule 6 — max consecutive DO */
-    if(ruleOn("maxConsecDo")){
-      const maxDo = ruleNum("maxConsecDo", 4);
-      const doDates = [...new Set(duties.filter(d => d.type === "DO").map(d => d.date))].sort();
-      let run = 0, best = 0;
-      for(let i = 0; i < doDates.length; i++){
-        if(i > 0 && daysBetween(doDates[i-1], doDates[i]) === 1) run++;
-        else run = 1;
-        best = Math.max(best, run);
-      }
-      if(best > maxDo){
-        issues.push({ ok:false, who, text:who+": "+best+" consecutive days off exceeds the maximum of "+maxDo+"." });
-      }
-    }
+    /* Rule 6 — days off entitlement */
+    checkDaysOffEntitlement(crew, who, issues);
 
     /* Rule 4 — rest period */
     if(ruleOn("restFixed") || ruleOn("restMatchDuty")){
@@ -1855,7 +1992,9 @@ function validate(data){
     });
   }
 
-  const fails = issues.filter(i => !i.ok).length;
+  /* a warning is a note, not a failure — it does not reject the request */
+  const fails = issues.filter(i => !i.ok && !i.warn).length;
+  const warns = issues.filter(i => i.warn).length;
 
   /* group issues by rule for the verdict panel */
   const sections = [];
@@ -1863,7 +2002,7 @@ function validate(data){
   pushSec("Request", issues.filter(i => !i.who));
   pushSec("Per Crew Member", issues.filter(i => i.who));
 
-  return { result: fails === 0 ? "pass" : "fail", issues, fails, sections };
+  return { result: fails === 0 ? "pass" : "fail", issues, fails, warns, sections };
 }
 
 /* ============================================================
@@ -1925,14 +2064,18 @@ function renderVerdict(v, data){
     '<div class="verdict-title">'+(v.result==="pass"?"✓":"✕")+" "+label+'</div>' +
     '<div class="hint" style="margin-top:4px">'+
       esc(crewCount+" crew member(s), "+dayCount+" duty day(s)"+selNote)+
-      (v.result === "pass" ? " — all checks passed." : " — "+v.fails+" check(s) failed.")+
+      (v.result === "pass"
+        ? " — all checks passed"+(v.warns ? ", "+v.warns+" warning(s)." : ".")
+        : " — "+v.fails+" check(s) failed.")+
     '</div>';
 
   if(v.sections && v.sections.length){
     v.sections.forEach(sec => {
       html += '<div class="sec">'+esc(sec.title)+'</div><ul>';
       sec.items.forEach(i => {
-        html += '<li class="'+(i.ok?"pass":"fail")+'">'+(i.ok?"✓":"✕")+" "+esc(i.text)+"</li>";
+        const kind = i.warn ? "warn" : (i.ok ? "pass" : "fail");
+        const mark = i.warn ? "⚠" : (i.ok ? "✓" : "✕");
+        html += '<li class="'+kind+'">'+mark+" "+esc(i.text)+"</li>";
       });
       html += "</ul>";
     });

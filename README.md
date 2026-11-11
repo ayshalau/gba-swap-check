@@ -9,7 +9,7 @@ Offline-first PWA for validating crew shift and duty swap requests against GBA r
 
 - **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
 - **Roster Import** — upload a roster PDF and read it in the browser. Duty days are extracted as editable rows, then added to a swap request in one click. The file is never uploaded to a server.
-- **Rules** - all 28 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
+- **Rules** - all 30 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
 - **Records** - every check is saved with its result and findings; filter by result, search, load back into the form, delete, or export to CSV.
 
 ## Roster import
@@ -217,6 +217,11 @@ the button unticks them.
 The header of the panel shows the totals, for example *"2 crew member(s) · 60 duty day(s) ·
 32 selected"*, and the verdict repeats how many days were checked.
 
+The verdict lists every finding: a **✕** is a failed check and rejects the request, a **✓** is a
+check that passed, and a **⚠** is a warning — a note that does not reject the request on its own
+(the days off average is shown as a warning when the form does not yet hold the three 28-day
+periods the rule needs).
+
 Several flights on the same date are **one duty day**, so they share a single card: the duty
 and sector carry the whole chain (`HB 702 → HB 703`, `HKG TPE → TPE HKG`), the Duty Start is
 the first sector's and the Duty End the last sector's, and the block hours are the sum of the
@@ -389,8 +394,28 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 - Not more than 60 hours in any 7 consecutive days, 105 hours in any 14 consecutive days,
   or 210 hours in any 28 consecutive days.
 
-**6. Maximum Number of Consecutive Days Off**
-- Maximum 4 consecutive DO.
+**6. Days Off Entitlement**
+
+> Cabin Crew shall not be rostered for duty on more than 6 consecutive days between Days Off; but
+> i) shall have 2 consecutive Days Off in any consecutive 14 days following the previous 2 consecutive
+> Days Off, and
+> ii) shall have a minimum of 7 Days Off in any consecutive 28 days, and
+> iii) shall have an average of at least 8 Days Off in each consecutive 28 days period, averaged over
+> three such periods.
+
+- The first sentence is the **6 consecutive days on duty** rule in group 3.
+- **2 consecutive Days Off in any 14 days** — the longest run of days off in any 14-day stretch must
+  be at least 2.
+- **At least 7 Days Off in any 28 days** — every 28-day stretch must hold 7 days off.
+- **An average of 8 Days Off per 28 days, averaged over three such periods** — over 84 days the
+  total days off must be at least 24. When the form does not hold three full periods yet, the
+  average is taken over the whole periods that are there and the finding is shown as a **warning**,
+  not a failure.
+- These three are **roster rules**, so they are measured on every duty day on the form for that crew
+  member, not only on the ticked days — a swap is judged against the days around it. A window is
+  only looked at when the form holds a card for **every day in it**, so a form that is only partly
+  filled is never judged on it, and an **annual leave counts as a day off**, like a DO.
+- The old **Maximum Consecutive Days Off (4)** rule was replaced by these three.
 
 ## Running
 
