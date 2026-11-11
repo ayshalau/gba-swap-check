@@ -261,12 +261,12 @@ The app is built to work on a phone as well as a desktop, and is installable:
   second. A day off is the duty code alone. A phone uses the same stack, with the date strip
   above it.
 - The roster rows are a wide table on a desktop and become a **labelled form** on a narrow one —
-  each field carries its own name, so nothing is left to guess. Every field sits in the same
-  column, including the date: on a phone the date shares the first line with the duty code and
-  is the same width as Duty Start, Dep Time and the rest, so the whole row is on one grid. The
-  sector takes a line of its own, and the figures pair up underneath: Duty Start with Duty End,
-  Dep with Arr, Period with Block. On a tablet the date, duty and sector share the first line,
-  all three the same width.
+  each field carries its own name, so nothing is left to guess. Every field is either **half a
+  line** or **a whole line**: a short field (the date, the duty code, a time, the period, the
+  block) is half, two to a line, and a long one (the sector) takes the whole line. On a phone the
+  date shares the first line with the duty code and is the same width as Duty Start, Dep Time and
+  the rest, so the whole row is on one grid. On a tablet the date, duty and sector share the first
+  line, all three the same width.
 - A row shows only the fields that can apply to its duty code, so a **day off is just a date
   and a duty code** instead of seven empty boxes. A standby keeps its start, end and period.
   The values are cleared when the code is confirmed, so the preview and the export stay honest.
@@ -280,6 +280,12 @@ The app is built to work on a phone as well as a desktop, and is installable:
   buttons and the duty-day tick are at least 44px so they are easy to hit. The same rules apply to
   **any touch screen** (`pointer: coarse`), so a phone turned sideways keeps the large type and
   the big tap targets as well.
+- Every input on a phone has one of only **two widths**: **half a line** (the date, the duty code,
+  the times, the period, the block, a rule threshold) or **a whole line** (the sector, the crew
+  name, the records filter and search, the PDF crew name). The duty card follows the same rule —
+  the duty code and the sector take a whole line, the two times half each — and the day-off card
+  uses the same full-width duty box as every other card. No field sits at a width of its own,
+  which is what made the forms look ragged.
 - The roster table keeps its column widths and scrolls **inside** the panel, so a narrow window
   never stretches the page sideways.
 - The four tabs fit on one line down to 320px instead of clipping the last word.

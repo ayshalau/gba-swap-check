@@ -250,6 +250,8 @@
     font-family:inherit;font-size:14px;padding:9px 12px;outline:none;
   }
   .toolbar select:focus,.toolbar input:focus{border-color:var(--accent)}
+  /* the search box takes the free room on a desktop toolbar */
+  .toolbar #filter-text{flex:1;min-width:160px}
   .toolbar .spacer{flex:1}
 
   .rec{
@@ -443,7 +445,7 @@
     #filter-text,#filter-result,
     label.field input,label.field select,label.field textarea{font-size:16px}
     .party-head .c-name,#filter-text,#filter-result{min-height:42px}
-    .rule-card .rule-line .val input{min-height:42px;width:130px}
+    .rule-card .rule-line .val input{min-height:42px}
     .btn{min-height:44px}
     .btn-sm{min-height:40px}
     .btn-mini{min-height:36px}
@@ -473,9 +475,14 @@
     .logotype{font-size:22px}
     nav button{padding:9px 12px 11px;font-size:13px}
     .rec-top{flex-direction:column;align-items:flex-start}
-    /* the rule value sits under its label */
+    /* the rule value sits under its label, in a half line like every other
+       short field — it used to be a width of its own for each rule. The unit
+       keeps a column of its own, so every threshold box is the same width. */
     .rule-card .rule-line{flex-direction:column;align-items:flex-start;gap:6px}
-    .rule-card .rule-line .val input{width:100%;max-width:200px}
+    .rule-card .rule-line .val{width:50%;max-width:230px}
+    .rule-card .rule-line .val.with-unit{display:grid;grid-template-columns:minmax(0,1fr) 52px;align-items:center;gap:8px}
+    .rule-card .rule-line .val input{width:100%;min-width:0;max-width:none}
+    .rule-card .rule-line .val .unit{font-size:13px;color:var(--muted)}
     /* roomier tap targets */
     .row-del{padding:8px 12px;font-size:20px}
     .duty-check input{width:20px;height:20px}
@@ -491,7 +498,7 @@
     #filter-text,#filter-result,
     label.field input,label.field select,label.field textarea{font-size:16px}
     .party-head .c-name,#filter-text,#filter-result{min-height:42px}
-    .rule-card .rule-line .val input{min-height:42px;width:130px}
+    .rule-card .rule-line .val input{min-height:42px}
     .btn{min-height:44px}
     .btn-sm{min-height:40px}
     .btn-mini{min-height:36px}
@@ -515,18 +522,21 @@
     .ocr-row .o-date::-webkit-calendar-picker-indicator{
       width:14px;height:14px;padding:0;margin-left:0;
     }
-    /* the card is a two-column grid: duty and sector take a line each, the
-       figures pair up, and the remove button sits in the date strip */
+    /* the card uses two sizes: the duty code (which can hold a whole chain,
+       "HB 702 → HB 703") and the sector are text and take a whole line, the
+       two times are short and pair up at half a line */
     .duty-card{grid-area:card;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
     .duty-card .f-duty,
+    .duty-day.multi .duty-card .f-duty{grid-column:1/-1;grid-row:auto}
     .duty-card .f-sector,
-    .duty-day.multi .duty-card .f-duty,
     .duty-day.multi .duty-card .f-sector{grid-column:1/-1;grid-row:auto}
     .duty-card .f-start,
     .duty-day.multi .duty-card .f-start{grid-column:1;grid-row:auto}
     .duty-card .f-end,
     .duty-day.multi .duty-card .f-end{grid-column:2;grid-row:auto}
-    .duty-day.compact .duty-card{grid-template-columns:1fr}
+    /* a day off shows the one code in the same full-width box as every other
+       duty code — it used to be a narrow box of its own */
+    .duty-day.compact .duty-card input{width:100%}
     /* the date becomes a strip above the card, with the remove button at its
        right end so it no longer takes a line of its own */
     .duty-day{
@@ -555,6 +565,16 @@
     .brand-logo{width:52px;height:37px}
     .logotype{font-size:19px}
     .brand-sub{font-size:11px;letter-spacing:.1em}
+    /* one size per kind of field: the crew name, the records search and the
+       filter take the whole line, a rule threshold is a short number and takes
+       half a line — no box sits at a width of its own */
+    .party-ctl{flex-direction:column;align-items:stretch}
+    .party-head .c-name{width:100%;flex:none}
+    .party-ctl .btn{width:100%}
+    .toolbar{flex-direction:column;align-items:stretch}
+    .toolbar .spacer{display:none}
+    .toolbar select,.toolbar input{width:100%}
+    .toolbar #filter-text{flex:none;min-width:0}
     .panel{padding:14px}
     .toast{max-width:calc(100% - 24px)}
   }
@@ -581,6 +601,9 @@
     .duty-card{grid-template-columns:1fr}
     .duty-card .f-end,
     .duty-day.multi .duty-card .f-end{grid-column:1}
+    /* the threshold box needs the whole half line: the unit drops underneath
+       rather than squeezing the number */
+    .rule-card .rule-line .val.with-unit{display:block}
     /* the roster rows fall back to one field per line: a date, a duty code
        and a sector all need the whole width at this size */
     .ocr-row{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -728,7 +751,7 @@
           <option value="pass">Approved</option>
           <option value="fail">Rejected</option>
         </select>
-        <input id="filter-text" type="search" aria-label="Search records" placeholder="Search records" style="flex:1;min-width:160px">
+        <input id="filter-text" type="search" aria-label="Search records" placeholder="Search records">
         <span class="spacer"></span>
         <span class="hint" id="records-count"></span>
         <button class="btn btn-ghost btn-sm" id="export-records">Export CSV</button>
@@ -1799,9 +1822,9 @@ function renderRules(){
         '</div>' +
         '<div class="rule-text">'+r.text+'</div>' +
         (editable
-          ? '<div class="rule-line"><span class="lbl">Threshold</span><span class="val">' +
+          ? '<div class="rule-line"><span class="lbl">Threshold</span><span class="val'+(r.unit?" with-unit":"")+'">' +
               '<input type="'+(r.time?"time":"number")+'"'+(r.numeric && !r.time?' step="0.5" min="0"':'')+' class="r-val" aria-label="Rule value" value="'+esc(r.value)+'"> ' +
-              (r.unit ? esc(r.unit) : "") +
+              (r.unit ? '<span class="unit">'+esc(r.unit)+'</span>' : "") +
             '</span></div>'
           : '<div class="rule-line"><span class="lbl">Setting</span><span class="val">'+(r.on?"Applied":"Skipped")+'</span></div>') +
       '</div>';
