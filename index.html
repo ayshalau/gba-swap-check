@@ -2,12 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#A1E3E6">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Swap Check">
+<!-- iOS turns anything that looks like a number into a blue phone link; the
+     roster is full of times and block hours, so that must stay off -->
+<meta name="format-detection" content="telephone=no">
 <!-- the icon an iPhone puts on the home screen -->
 <link rel="apple-touch-icon" href="swap-icon.png">
 <link rel="manifest" href="manifest.json">
@@ -37,6 +40,16 @@
      breaks the layout on a phone turned sideways */
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   html,body{height:100%}
+  /* iOS flashes a grey box over anything tapped and waits to see whether a
+     double tap is coming; neither belongs in an app */
+  button,input,select,textarea,label,a{-webkit-tap-highlight-color:transparent}
+  .btn,nav button,.duty-date,.duty-check,label.field{touch-action:manipulation}
+  /* a long press on the date strip or a button should not start a selection */
+  .btn,nav button,.duty-date,.duty-check,.duty-card label,.rule-toggle{
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  /* …but the text inside a field must still be selectable */
+  input,select,textarea{-webkit-user-select:text;user-select:text}
   body{
     background:var(--bg);
     color:var(--ink);
@@ -45,6 +58,8 @@
     line-height:1.5;
     display:flex;flex-direction:column;
     min-height:100vh;
+    /* iOS counts the address bar in 100vh; dvh is the height actually shown */
+    min-height:100dvh;
     -webkit-font-smoothing:antialiased;
   }
   h1,h2,h3{font-family:Arial,Helvetica,sans-serif;font-weight:700;letter-spacing:.01em}
@@ -54,7 +69,9 @@
   header{
     border-bottom:1px solid var(--line);
     background:linear-gradient(180deg,#b5e6e9,var(--bg));
-    padding:18px 22px 0;
+    /* the notch and the rounded corners take a strip at the sides in
+       landscape; the padding grows to keep the content clear of them */
+    padding:calc(18px + env(safe-area-inset-top)) max(22px,env(safe-area-inset-left)) 0 max(22px,env(safe-area-inset-right));
   }
   .brand-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;max-width:1260px;margin:0 auto;padding-bottom:14px}
   .brand-id{display:flex;align-items:center;gap:12px}
@@ -71,7 +88,7 @@
   nav button.active{color:var(--gold-soft);border-bottom-color:var(--accent)}
 
   /* ---------- layout ---------- */
-  main{flex:1;width:100%;max-width:1260px;margin:0 auto;padding:26px 22px 60px}
+  main{flex:1;width:100%;max-width:1260px;margin:0 auto;padding:26px max(22px,env(safe-area-inset-left)) calc(60px + env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-right))}
   section.view{display:none}
   section.view.active{display:block}
 
@@ -102,6 +119,16 @@
   input[type=date]::-webkit-calendar-picker-indicator,
   input[type=datetime-local]::-webkit-calendar-picker-indicator,
   input[type=time]::-webkit-calendar-picker-indicator{opacity:.55}
+  /* iOS draws its own search field, with an inner shadow, a magnifier and a
+     clear button; the app draws its own, so the native chrome is turned off */
+  input[type=search]{-webkit-appearance:none;appearance:none}
+  input[type=search]::-webkit-search-decoration,
+  input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none}
+  /* iOS centres the value inside a date or time field; every other field on
+     the page starts at the left edge */
+  input[type=date]::-webkit-date-and-time-value,
+  input[type=time]::-webkit-date-and-time-value,
+  input[type=datetime-local]::-webkit-date-and-time-value{text-align:left}
 
   .btn{
     appearance:none;cursor:pointer;border:1px solid transparent;border-radius:9px;
@@ -167,6 +194,8 @@
     position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;
     opacity:0;border:none;background:transparent;pointer-events:none;
   }
+  /* iOS takes the tap on the field itself, so it must stay tappable there */
+  html.is-ios .duty-date .d-date{pointer-events:auto;cursor:pointer}
   .duty-date:focus-within{outline:2px solid var(--accent);outline-offset:1px}
   .duty-card{
     flex:1 1 auto;display:grid;gap:8px 10px;align-items:end;
@@ -250,6 +279,13 @@
     font-family:inherit;font-size:14px;padding:9px 12px;outline:none;
   }
   .toolbar select:focus,.toolbar input:focus{border-color:var(--accent)}
+  /* iOS keeps its own select arrow and ignores the app's padding; the arrow
+     is drawn here instead, at the same place on every phone */
+  .toolbar select{
+    -webkit-appearance:none;appearance:none;padding-right:38px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%234e6b6e' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:12px 8px;
+  }
   /* the search box takes the free room on a desktop toolbar */
   .toolbar #filter-text{flex:1;min-width:160px}
   .toolbar .spacer{flex:1}
@@ -345,13 +381,19 @@
   .roster-table tfoot .total-value{color:var(--gold-soft);font-size:13px}
 
   /* ---------- misc ---------- */
-  footer{border-top:1px solid var(--line);padding:14px 22px;background:var(--panel)}
+  /* iOS needs this for a smooth sideways scroll inside a panel */
+  .roster-scroll,.ocr-table,nav{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  footer{
+    border-top:1px solid var(--line);background:var(--panel);
+    /* the home indicator sits over the bottom strip */
+    padding:14px max(22px,env(safe-area-inset-left)) calc(14px + env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-right));
+  }
   .footer-inner{max-width:1260px;margin:0 auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .footer-inner .grow{flex:1}
   .footer-note{font-size:12px;color:var(--muted)}
 
   #toast{
-    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
     background:var(--panel);border:1px solid var(--gold-soft);color:var(--ink);
     padding:12px 20px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;
     transition:opacity .25s,transform .25s;z-index:50;box-shadow:0 8px 24px rgba(31,41,55,.25);
@@ -386,8 +428,8 @@
     main,.brand-row,nav,.footer-inner{max-width:1400px}
   }
   @media (max-width:1024px){
-    header{padding:14px 16px 0}
-    main{padding:20px 16px 48px}
+    header{padding:calc(14px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-left)) 0 max(16px,env(safe-area-inset-right))}
+    main{padding:20px max(16px,env(safe-area-inset-left)) calc(48px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right))}
     .panel{padding:16px}
     .brand-logo{width:62px;height:44px}
   }
@@ -714,7 +756,7 @@
       </div>
       <div class="grid-3" style="margin-bottom:14px">
         <label class="field">Crew Name (shown on the PDF)
-          <input id="pdf-crew" placeholder="e.g. Chan Tai Man" autocomplete="off">
+          <input id="pdf-crew" placeholder="e.g. Chan Tai Man" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false">
         </label>
       </div>
 
@@ -751,7 +793,7 @@
           <option value="pass">Approved</option>
           <option value="fail">Rejected</option>
         </select>
-        <input id="filter-text" type="search" aria-label="Search records" placeholder="Search records">
+        <input id="filter-text" type="search" aria-label="Search records" placeholder="Search records" autocorrect="off" spellcheck="false" autocapitalize="off">
         <span class="spacer"></span>
         <span class="hint" id="records-count"></span>
         <button class="btn btn-ghost btn-sm" id="export-records">Export CSV</button>
@@ -780,6 +822,11 @@
    ============================================================ */
 const KEY = "gbaswapcheck.v2";
 const RULES_KEY = "gbaswapcheck.rules.v2";
+/* iPadOS reports itself as a Mac, so the touch count is what gives it away */
+const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+               (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+/* iOS opens its native picker on a real tap but not always on a scripted one */
+if(IS_IOS) document.documentElement.classList.add("is-ios");
 
 /* Default thresholds, all editable in the Rules tab */
 const DEFAULT_RULES = [
@@ -1205,8 +1252,8 @@ function addDutyDay(crewEl, data){
       '<input type="date" class="d-date" aria-label="Duty date" value="'+esc(d.date||"")+'">' +
     '</div>' +
     '<div class="duty-card">' +
-      '<label class="f-duty">Duty<input type="text" class="d-flight" placeholder="HB 702" value="'+esc(d.flight||"")+'"></label>' +
-      '<label class="f-sector">Sector<input type="text" class="d-sector" placeholder="HKG TPE" value="'+esc(d.sector||"")+'"></label>' +
+      '<label class="f-duty">Duty<input type="text" class="d-flight" placeholder="HB 702" value="'+esc(d.flight||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"></label>' +
+      '<label class="f-sector">Sector<input type="text" class="d-sector" placeholder="HKG TPE" value="'+esc(d.sector||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"></label>' +
       '<label class="f-start"><span class="lbl-text">Duty Start</span><input type="time" class="d-start" value="'+esc(d.start||"")+'"></label>' +
       '<label class="f-end"><span class="lbl-text">Duty End</span><input type="time" class="d-end" value="'+esc(d.end||"")+'"></label>' +
       '<button class="row-del" title="Remove duty day" aria-label="Remove duty day">×</button>' +
@@ -1239,6 +1286,9 @@ function addDutyDay(crewEl, data){
   el.querySelector(".d-date").addEventListener("change", () => updateDutyDateLabel(el));
   /* clicking the day number opens the date picker */
   el.querySelector(".duty-date").addEventListener("click", () => {
+    /* on iOS the field itself takes the tap and the native wheel opens; a
+       scripted focus does not reliably reopen it once the field has focus */
+    if(IS_IOS) return;
     const input = el.querySelector(".d-date");
     try{ if(input.showPicker) input.showPicker(); else input.focus(); }
     catch(e){ input.focus(); }
@@ -1279,7 +1329,7 @@ function addCrew(data){
     '<div class="party-head">' +
       '<div class="who"><span class="tag">Crew Member</span><span class="crew-name-label">'+esc(d.name||("Crew Member "+crewSeq))+'</span></div>' +
       '<div class="party-ctl">' +
-        '<input type="text" class="c-name" aria-label="Crew member name" value="'+esc(d.name||"")+'" placeholder="Crew member name">' +
+        '<input type="text" class="c-name" aria-label="Crew member name" value="'+esc(d.name||"")+'" placeholder="Crew member name" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false">' +
         '<button class="btn btn-ghost btn-sm c-add-day">+ Duty Day</button>' +
       '</div>' +
     '</div>' +
@@ -2661,14 +2711,14 @@ function renderOcrRows(){
     main.className = "ocr-row";
     main.innerHTML =
       '<label class="f f-date"><span class="cap">Date</span><input type="date" class="o-date" value="'+esc(r.date||"")+'"></label>' +
-      '<label class="f f-duty"><span class="cap">Duty</span><input type="text" class="o-flight" placeholder="Duty" value="'+esc(r.flight||"")+'"></label>' +
-      '<label class="f f-sector"><span class="cap">Sector</span><input type="text" class="o-sector" placeholder="Sector" value="'+esc(r.sector||"")+'"></label>' +
+      '<label class="f f-duty"><span class="cap">Duty</span><input type="text" class="o-flight" placeholder="Duty" value="'+esc(r.flight||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"></label>' +
+      '<label class="f f-sector"><span class="cap">Sector</span><input type="text" class="o-sector" placeholder="Sector" value="'+esc(r.sector||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"></label>' +
       '<label class="f f-start"><span class="cap">Duty Start</span><input type="text" inputmode="numeric" maxlength="5" class="o-start" placeholder="HHMM" value="'+esc(hmToDigits(r.start))+'"></label>' +
       '<label class="f f-end"><span class="cap">Duty End</span><input type="text" inputmode="numeric" maxlength="5" class="o-end" placeholder="HHMM" value="'+esc(hmToDigits(r.end))+'"></label>' +
       '<label class="f f-dep"><span class="cap">Dep Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-dep" placeholder="HHMM" value="'+esc(hmToDigits(r.dep))+'"></label>' +
       '<label class="f f-arr"><span class="cap">Arr Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-arr" placeholder="HHMM" value="'+esc(hmToDigits(r.arr))+'"></label>' +
-      '<label class="f f-period"><span class="cap">Duty Period</span><input type="text" class="o-period" placeholder="h:mm" value="'+esc(r.period||"")+'"></label>' +
-      '<label class="f f-block"><span class="cap">Block Hour</span><input type="text" class="o-block" placeholder="h:mm" value="'+esc(r.block||"")+'"></label>' +
+      '<label class="f f-period"><span class="cap">Duty Period</span><input type="text" class="o-period" placeholder="h:mm" value="'+esc(r.period||"")+'" autocapitalize="off" autocorrect="off" spellcheck="false"></label>' +
+      '<label class="f f-block"><span class="cap">Block Hour</span><input type="text" class="o-block" placeholder="h:mm" value="'+esc(r.block||"")+'" autocapitalize="off" autocorrect="off" spellcheck="false"></label>' +
       '<button class="row-del" title="Remove row" aria-label="Remove row">×</button>';
 
     /* the duty code decides which fields can apply, which the narrow layout uses */
@@ -3513,6 +3563,12 @@ dropZone.addEventListener("drop", e => {
   const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
   handleFile(f);
 });
+
+/* an iPhone cannot drop a file, so the wording follows the device */
+if(matchMedia("(pointer:coarse)").matches){
+  document.getElementById("dz-main").textContent = "Choose a roster PDF";
+  document.querySelector(".dz-sub").textContent = "from the Files app";
+}
 
 document.getElementById("ocr-add-flight").addEventListener("click", () => {
   ocrClearError();

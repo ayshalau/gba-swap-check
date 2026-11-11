@@ -385,11 +385,28 @@ rather than `file://`.
 
 ### On an iPhone
 
-- **Add to Home Screen** gives the standalone app with the GBA icon (`swap-icon.png`).
+- **Add to Home Screen** gives the standalone app with the GBA icon (`swap-icon.png`) and the
+  short name **Swap Check** under it.
 - The text is never enlarged in landscape (`text-size-adjust`), so the layout holds when the
   phone is turned sideways.
 - Every field is 16px or larger, so focusing one never zooms the page.
 - The tap targets stay at least 44px on a touch screen, in portrait and in landscape.
+- The notch, the rounded corners and the home indicator are kept clear: the header, main
+  column, footer and toast pad themselves with `env(safe-area-inset-*)`, and the layout uses
+  `100dvh` so the address bar does not push the footer off the screen.
+- The **date strip can be tapped** to open the iOS date wheel. iOS opens its own picker on a
+  real tap but not reliably on a scripted one, so on iOS the hidden date field takes the tap
+  itself instead of the page calling `showPicker()`.
+- Keyboard hints are set per field: duty codes and sectors capitalise (`autocapitalize`
+  characters), crew names capitalise words, and every field turns off auto-correction and
+  spell-check. Times and numbers never become blue phone links (`format-detection=telephone=no`).
+- iOS's own search and select chrome is replaced: the records search has no inner shadow or
+  native clear button, and the records filter draws the same chevron on every phone.
+- A tapped button does not flash a grey box (`-webkit-tap-highlight-color`), a long press on
+  the date strip or a button does not start a text selection, and the tables scroll sideways
+  smoothly without dragging the page with them.
+- With no file to drag, the drop zone reads **Choose a roster PDF / from the Files app** on
+  a touch screen, and **Choose File** opens the iOS document picker.
 
 ### Updates and the offline cache
 
