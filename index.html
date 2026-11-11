@@ -3387,8 +3387,6 @@ function totalBlockHours(records){
   return rosterDuration(mins);
 }
 
-/* Count the duty days on a roster: DO and AL are days off, not duty, so they
-   are not counted, and several flights on the same date are one duty day. */
 /* The days off in a roster record: a day off, the rest day DO-R and an annual
    leave. Each one is a day of its own on the roster. */
 function rosterDayOffKind(duty){
@@ -3399,6 +3397,9 @@ function rosterDayOffKind(duty){
   return "";
 }
 
+/* Count the duty days on a roster: a day off, a rest day and a leave are days
+   off, not duty, so they are not counted, and several flights on the same date
+   are one duty day. */
 function countRosterDutyDays(records){
   const seen = {};
   let count = 0;
