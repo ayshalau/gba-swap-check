@@ -606,6 +606,10 @@
        the card is a grid of equal rows — this holds in a narrow desktop window
        too, where the pointer is not coarse */
     .duty-card input,.duty-card select{height:44px;min-height:44px}
+    /* the value sits in the middle of its box; the labels above stay at the
+       left edge, so they still read as labels and the card stays balanced */
+    .duty-card input{text-align:center}
+    .duty-card input[type="time"]::-webkit-date-and-time-value{text-align:center}
     .duty-card .row-del{
       position:absolute;top:0;right:0;width:44px;height:44px;
       display:flex;align-items:center;justify-content:center;padding:0;

@@ -1,4 +1,4 @@
-const CACHE = "gba-swap-check-v61";
+const CACHE = "gba-swap-check-v62";
 const ASSETS = [
   "./",
   "index.html",
