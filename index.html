@@ -422,7 +422,7 @@
     #filter-text,#filter-result,
     label.field input,label.field select,label.field textarea{font-size:16px}
     .party-head .c-name,#filter-text,#filter-result{min-height:42px}
-    .rule-card .rule-line .val input{min-height:38px;width:130px}
+    .rule-card .rule-line .val input{min-height:42px;width:130px}
     .btn{min-height:44px}
     .btn-sm{min-height:40px}
     .btn-mini{min-height:36px}
@@ -528,8 +528,30 @@
     nav button{padding:10px 9px 12px;font-size:12px}
     .brand-sub{letter-spacing:.08em}
     /* a very narrow phone needs every pixel for the two duty times */
-    .duty-card{padding:10px;gap:8px}
+    .duty-card{padding:8px;gap:6px}
     .duty-card input{padding:8px 6px}
+    /* the clock icon is drawn smaller, so a whole "09:50 am" still fits
+       beside it */
+    .duty-card input[type="time"]{padding:8px 4px}
+    .duty-card input[type="time"]::-webkit-calendar-picker-indicator,
+    .duty-card input[type="date"]::-webkit-calendar-picker-indicator{
+      width:14px;height:14px;padding:0;margin-left:2px;
+    }
+  }
+  @media (max-width:340px){
+    /* the four tabs still fit on one line */
+    nav button{padding:10px 7px 12px}
+    /* a 320px phone cannot hold two times side by side, so each duty time
+       takes a line of its own instead of being cut off */
+    .duty-card{grid-template-columns:1fr}
+    .duty-card .f-end,
+    .duty-day.multi .duty-card .f-end{grid-column:1}
+    /* the roster rows fall back to one field per line: a date, a duty code
+       and a sector all need the whole width at this size */
+    .ocr-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .ocr-row .f-date,
+    .ocr-row .f-duty,
+    .ocr-row .f-sector{grid-column:1/-1}
   }
 </style>
 </head>

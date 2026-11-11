@@ -263,12 +263,15 @@ The app is built to work on a phone as well as a desktop, and is installable:
   which makes the card noticeably shorter.
 - The two duty times always get room for a whole "09:50 am" plus the clock icon, so a time is
   never cut off inside its box: they take half the card on a phone and desktop, and keep at
-  least 128px when the card is wide enough for one line.
+  least 128px when the card is wide enough for one line. On a 320px phone the two times take
+  a line each instead, and the clock icon is drawn smaller to make room.
 - Fields are **16px** on a narrow screen so iOS does not zoom the page when one is focused, and
   buttons and the duty-day tick are at least 44px so they are easy to hit.
-- The four tabs fit on one line down to 360px instead of clipping the last word.
+- The four tabs fit on one line down to 320px instead of clipping the last word.
 - The roster preview stays a table and scrolls sideways, because the numbers need the columns.
-- Everything is checked at 1024px, 900px, 768px, 560px, 402px and 360px.
+- Everything is checked at 1024px, 900px, 768px, 560px, 430px, 402px, 390px, 375px, 360px and
+  320px, in all four views: no sideways scrolling of the page, no field under 16px and nothing
+  cut off inside a box.
 
 ## Saving the roster as PDF
 
