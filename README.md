@@ -9,7 +9,7 @@ Offline-first PWA for validating crew shift and duty swap requests against GBA r
 
 - **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
 - **Roster Import** — upload a roster PDF and read it in the browser. Duty days are extracted as editable rows, then added to a swap request in one click. The file is never uploaded to a server.
-- **Rules** - all 31 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
+- **Rules** - all 32 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
 - **Records** - every check is saved with its result and findings; filter by result, search, load back into the form, delete, or export to CSV.
 
 ## Roster import
@@ -209,10 +209,10 @@ swap check. The tick is on by default, and the header of each crew member shows 
 are ticked with a button to **Select all** or **Clear** them. The selection is saved with the
 record and restored when it is loaded back into the form.
 
-Days that cannot be ticked — an annual leave while that rule is on — are left out of the count
-and out of the **Select all** / **Clear** button, so the button always says what it will do:
-*"23 of 23 selected · 7 leave"* with **Clear** means the 23 swappable days are all ticked and
-the button unticks them.
+Days that cannot be ticked — an annual leave, or an NB / NDA code with no duty in it, while that
+rule is on — are left out of the count and out of the **Select all** / **Clear** button, so the
+button always says what it will do: *"23 of 23 selected · 7 not swappable"* with **Clear** means
+the 23 swappable days are all ticked and the button unticks them.
 
 The header of the panel shows the totals, for example *"2 crew member(s) · 60 duty day(s) ·
 32 selected"*, and the verdict repeats how many days were checked.
@@ -366,6 +366,10 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
   out nor taken in place of a duty. While the rule is on, an AL day cannot be ticked at all: the
   tick is locked and the card says "Annual leave — not swappable". The check also rejects a
   request that carries an AL day.
+- **NB / NDA cannot be swapped** — these codes carry no duty, so there is nothing to swap: they
+  can neither be swapped out nor taken in place of a duty. While the rule is on, an NB or NDA day
+  cannot be ticked: the tick is locked and the card says "No duty assignment — not swappable".
+  The check also rejects a request that carries one.
 
 **3. Day Off (DO) and Standby Duty**
 - A single DO must include 2 local nights and be at least 34 hours. A local night is 8
