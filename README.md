@@ -277,12 +277,16 @@ The app is built to work on a phone as well as a desktop, and is installable:
   never cut off inside its box: on a computer they share the third line of the card, each taking
   half of it, and on a 320px phone they take a line each with the clock icon drawn smaller.
 - Fields are **16px** on a narrow screen so iOS does not zoom the page when one is focused, and
-  buttons and the duty-day tick are at least 44px so they are easy to hit.
+  buttons and the duty-day tick are at least 44px so they are easy to hit. The same rules apply to
+  **any touch screen** (`pointer: coarse`), so a phone turned sideways keeps the large type and
+  the big tap targets as well.
+- The roster table keeps its column widths and scrolls **inside** the panel, so a narrow window
+  never stretches the page sideways.
 - The four tabs fit on one line down to 320px instead of clipping the last word.
 - The roster preview stays a table and scrolls sideways, because the numbers need the columns.
-- Everything is checked at 1024px, 900px, 768px, 560px, 430px, 402px, 390px, 375px, 360px and
-  320px, in all four views: no sideways scrolling of the page, no field under 16px and nothing
-  cut off inside a box.
+- Everything is checked at 1024px, 900px, 768px, 560px, 440px (iPhone 16 Pro Max), 430px, 402px,
+  390px, 375px, 360px and 320px, in all four views: no sideways scrolling of the page, no field
+  under 16px and nothing cut off inside a box.
 
 ## Saving the roster as PDF
 
@@ -372,6 +376,14 @@ npx serve "C:\Users\aysha\Documents\GBA Swap Check"
 
 For installable PWA behaviour (service worker, offline cache) serve over `http://localhost`
 rather than `file://`.
+
+### On an iPhone
+
+- **Add to Home Screen** gives the standalone app with the GBA icon (`swap-icon.png`).
+- The text is never enlarged in landscape (`text-size-adjust`), so the layout holds when the
+  phone is turned sideways.
+- Every field is 16px or larger, so focusing one never zooms the page.
+- The tap targets stay at least 44px on a touch screen, in portrait and in landscape.
 
 ### Updates and the offline cache
 
