@@ -394,6 +394,14 @@
     color:var(--muted);font-weight:600;
   }
   .roster-table tfoot .total-value{color:var(--gold-soft);font-size:13px}
+  /* the tally of the roster — the duty days and the days off by code — sits
+     under the crew name field */
+  .tally-line{
+    font-size:13px;color:var(--muted);line-height:1.5;
+    padding:8px 10px;border-radius:8px;background:var(--panel-2);
+    margin:0 0 12px;
+  }
+  .tally-line b{color:var(--ink);font-weight:700}
 
   /* ---------- misc ---------- */
   /* iOS needs this for a smooth sideways scroll inside a panel */
@@ -810,13 +818,14 @@
     <div class="panel hidden" id="roster-pdf-panel">
       <div class="row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Roster Preview &amp; PDF</span>
-        <span class="hint tally" id="roster-pdf-count"></span>
       </div>
-      <div class="grid-3" style="margin-bottom:14px">
+      <div class="grid-3" style="margin-bottom:10px">
         <label class="field">Crew Name (shown on the PDF)
           <input id="pdf-crew" placeholder="e.g. Chan Tai Man" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false">
         </label>
       </div>
+      <!-- the tally of the roster: the duty days and the days off by code -->
+      <div class="tally-line" id="roster-pdf-count"></div>
 
       <div class="roster-scroll">
         <table class="roster-table" id="roster-preview"></table>
@@ -3797,13 +3806,14 @@ function renderRosterPreview(records){
     '</tr></tfoot>';
 
   t.innerHTML = head + body + foot;
-  /* the header carries the tally: the duty days, then the days off by code */
+  /* the tally sits under the crew name field: the duty days, then the days
+     off by code */
   const off = countRosterDayOffs(records);
   const offText = (off.do + off.dor + off.al)
-    ? " · " + off.do + " DO · " + off.dor + " DO-R · " + off.al + " AL"
+    ? " · <b>" + off.do + "</b> DO · <b>" + off.dor + "</b> DO-R · <b>" + off.al + "</b> AL"
     : "";
-  document.getElementById("roster-pdf-count").textContent =
-    countRosterDutyDays(records) + " duty day(s)" + offText;
+  document.getElementById("roster-pdf-count").innerHTML =
+    "<b>" + countRosterDutyDays(records) + "</b> duty day(s)" + offText;
 }
 
 function refreshRosterPdfPanel(){
