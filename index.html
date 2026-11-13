@@ -2455,7 +2455,7 @@ function renderRules(){
       saveRules();
       updateHint();
       /* the locks follow the rules, so the duty days are re-checked */
-      if(r.id === "noAnnualLeaveSwap" || r.id === "noNbNdaSwap") refreshSwapLocks();
+      if(r.id === "noAnnualLeaveSwap" || r.id === "noNbNdaSwap" || r.id === "noDutyASwap") refreshSwapLocks();
     });
     if(valEl){
       valEl.addEventListener("change", () => {
