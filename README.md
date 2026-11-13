@@ -544,6 +544,21 @@ rather than `file://`.
 - With no file to drag, the drop zone reads **Choose a roster PDF / from the Files app** on
   a touch screen, and **Choose File** opens the iOS document picker.
 
+### App icon
+
+The icon is the GBA tail fin from `Logo.png`, laid out square on a soft brand wash, with the
+artwork's own transparent padding ignored so the fin is centred:
+
+| file | size | used for |
+| --- | --- | --- |
+| `icon-192.png` | 192x192 | home screen, browser tab |
+| `icon-512.png` | 512x512 | install prompt, splash screen |
+| `icon-maskable-512.png` | 512x512 | Android adaptive icon - the fin sits inside the 80% safe circle, so no launcher shape clips it |
+| `apple-touch-icon.png` | 180x180 | iPhone and iPad home screen |
+
+All four are opaque (iOS paints transparency black) and are listed in `manifest.json` and in
+the service worker `ASSETS` list.
+
 ### Updates and the offline cache
 
 The service worker keeps the app working with no connection, but it must never
