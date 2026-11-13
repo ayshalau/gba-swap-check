@@ -12,7 +12,7 @@ request from it.
 
 - **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
 - **Roster Import** — upload a roster PDF and read it in the browser. Duty days are extracted as editable rows, then added to a swap request in one click. The file is never uploaded to a server.
-- **Rules** - all 32 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
+- **Rules** - all 33 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
 - **Records** - every check is saved with its result and findings; filter by result, search, load back into the form, delete, or export to CSV.
 
 ## Roster import
@@ -377,6 +377,9 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 **1. Number of Duty Days in a Swap Request**
 - Maximum 10 consecutive duty days, or 5 individual (non-consecutive) duty days.
 - If any individual duty swap is not approved, all other swaps are also rejected.
+- **A swap is only allowed on the same date** — the duty days each crew member gives up must
+  fall on the same dates, so a duty on one day cannot be swapped for a duty on another day. Only
+  the ticked duty days are compared; a day left out of the swap is not part of the pairing.
 
 **2. Swap Limitations**
 - Block hours are counted **per calendar month**, from the 1st day of the month to its last

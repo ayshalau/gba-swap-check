@@ -914,6 +914,9 @@ if(IS_IOS) document.documentElement.classList.add("is-ios");
 /* Default thresholds, all editable in the Rules tab */
 const DEFAULT_RULES = [
   /* --- 1. Number of Duty Days in a Swap Request --- */
+  { group:"1. Duty Days in a Swap Request", id:"sameDateSwap", on:true, label:"Swap Only on the Same Date",
+    value:1, unit:"", numeric:false,
+    text:"A duty can only be swapped for a duty on the <b>same date</b>. The duty days each crew member gives up must fall on the same dates, so a duty on one day cannot be swapped for a duty on another day." },
   { group:"1. Duty Days in a Swap Request", id:"maxConsecDays", on:true, label:"Maximum Consecutive Duty Days",
     value:10, unit:"days", numeric:true,
     text:"A Swap Request can be <b>10 consecutive duty days</b> (e.g. 2nd–11th) or <b>5 individual duty days</b> (e.g. 6th, 10th, 18th, 20th, 23rd). " +
@@ -1814,6 +1817,32 @@ function validate(data){
   }
   if(crews.length < 2){
     issues.push({ ok:false, text:"A swap requires at least two crew members (the requester and a swap partner)." });
+  }
+
+  /* Rule 1 — a swap is only allowed on the same date: the duty days each crew
+     member gives up must fall on the same dates. */
+  if(crews.length >= 2 && ruleOn("sameDateSwap")){
+    const dateList = c => {
+      const seen = {};
+      (c.duties||[]).forEach(d => { if(d.date) seen[d.date] = true; });
+      return Object.keys(seen).sort();
+    };
+    const lists = crews.map(dateList);
+    const fmtList = ds => ds.length ? ds.map(rosterDate).join(", ") : "no duty day";
+    for(let i = 1; i < crews.length; i++){
+      const a = lists[0], b = lists[i];
+      if(!a.length || !b.length) continue;   /* nothing to pair up yet */
+      const onlyA = a.filter(d => b.indexOf(d) === -1);
+      const onlyB = b.filter(d => a.indexOf(d) === -1);
+      if(!onlyA.length && !onlyB.length) continue;
+      const nameA = crews[0].name || ("Crew member #1");
+      const nameB = crews[i].name || ("Crew member #"+(i+1));
+      issues.push({
+        ok:false,
+        text:"Swap dates: "+nameA+" swaps out "+fmtList(a)+" but "+nameB+" swaps out "+fmtList(b)+
+             ". A swap is only allowed on the same date."
+      });
+    }
   }
 
   /* ---- per-crew rules ---- */
