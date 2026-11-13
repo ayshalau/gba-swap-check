@@ -254,8 +254,13 @@ The header of the panel shows the totals, for example *"2 crew member(s) · 60 d
 Under all of a crew member's duty cards sits their **Total Block Hours** — every card added up
 and shown as `H:MM`, the same way the roster prints block time (*"4:10"*). When some days are
 left unticked, the ticked figure is shown beside it (*"5:00 · 3:45 selected"*), so the total on
-the form and the total that will actually be checked are both visible. The figure follows the
-cards as they are typed, imported, ticked or removed.
+the form and the total that will actually be checked are both visible.
+
+Under that is the **After Swap** figure: the block hours the crew member will hold once the
+swap is done — the days that are not swapped away stay, and the days swapped away come back as
+the other crew member's duty. It is the figure the 50-hour minimum is judged against, so it
+moves as soon as a day is ticked or the other crew member's duty changes. Both figures follow
+the cards as they are typed, imported, ticked or removed.
 
 The verdict lists every finding: a **✕** is a failed check and rejects the request, a **✓** is a
 check that passed, and a **⚠** is a warning — a note that does not reject the request on its own

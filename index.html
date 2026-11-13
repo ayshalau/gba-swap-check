@@ -162,10 +162,13 @@
   .party-body{padding:14px 12px}
   /* the crew member's block-hour total, under all of their duty cards */
   .party-total{
-    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
     margin-top:10px;padding:9px 12px;border-radius:10px;
     background:var(--panel-2);border:1px solid var(--line);
   }
+  .party-total .trow{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  }
+  .party-total .trow + .trow{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
   .party-total .lbl{
     font-size:11px;letter-spacing:.08em;text-transform:uppercase;
     color:var(--muted);font-weight:600;
@@ -175,6 +178,8 @@
     font-size:16px;font-weight:700;color:var(--gold-soft);
     font-variant-numeric:tabular-nums;
   }
+  /* the block hours the crew member holds after the swap */
+  .party-total .val-after{color:var(--accent)}
   .party-total .sub{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
   /* the crew member name field */
   .party-head .c-name{
@@ -1510,18 +1515,46 @@ function partyBlockTotals(crewEl){
   return { all: allMins, sel: selMins };
 }
 
-/* Show the crew member's block-hour total under their duty cards. When some
-   days are left out of the swap, the ticked figure is shown beside it. */
+/* The block hours a crew member holds after the swap: the days that are not
+   swapped away stay, and the days swapped away come back as the other crew
+   member's duty. */
+function partyBlockAfterSwap(crewEl){
+  const t = partyBlockTotals(crewEl);
+  /* the block hours the other crew member gives up, and this one takes in */
+  let inMins = 0;
+  [...document.querySelectorAll("#parties .party")].forEach(other => {
+    if(other === crewEl) return;
+    other.querySelectorAll(".duty-day").forEach(el => {
+      if(el.dataset.selected === "0") return;
+      const b = parseFloat(el.dataset.block || "");
+      if(!isFinite(b) || b <= 0) return;
+      inMins += Math.round(b * 60);
+    });
+  });
+  return t.all - t.sel + inMins;
+}
+
+/* Show the crew member's block-hour total under their duty cards, and the
+   figure they will hold after the swap. When some days are left out of the
+   swap, the ticked figure is shown beside the total. */
 function updatePartyTotal(crewEl){
   if(!crewEl) return;
   const box = crewEl.querySelector(".party-total");
   if(!box) return;
   const t = partyBlockTotals(crewEl);
   box.querySelector(".val").textContent = rosterDuration(t.all);
+  const after = box.querySelector(".val-after");
+  if(after) after.textContent = rosterDuration(partyBlockAfterSwap(crewEl));
   const sub = box.querySelector(".sub");
   const differs = t.sel !== t.all;
   sub.textContent = differs ? " · " + rosterDuration(t.sel) + " selected" : "";
   sub.hidden = !differs;
+}
+
+/* The totals of every crew member, so a change on one side shows on the other
+   side as well. */
+function updatePartyTotals(){
+  document.querySelectorAll("#parties .party").forEach(updatePartyTotal);
 }
 
 /* A swap is only allowed on the same date, so the two sides of the request
@@ -1685,6 +1718,8 @@ function addDutyDay(crewEl, data){
       on: ev.target.checked
     }]);
     updateSelCount(el.closest(".party"));
+    /* the other crew member takes in these block hours, so its figure moves too */
+    updatePartyTotals();
     updateSummary();
   });
   /* the duty code decides the type, and a day off hides its other fields */
@@ -1704,7 +1739,7 @@ function addDutyDay(crewEl, data){
         el.querySelector(".d-start").value,
         el.querySelector(".d-end").value
       );
-      updatePartyTotal(el.closest(".party"));
+      updatePartyTotals();
     });
   });
   el.querySelector(".d-date").addEventListener("change", () => {
@@ -1782,8 +1817,14 @@ function addCrew(data){
       '</div>' +
       '<div class="duties"></div>' +
       '<div class="party-total">' +
-        '<span class="lbl">Total Block Hours</span>' +
-        '<span class="figs"><b class="val">0:00</b><span class="sub"></span></span>' +
+        '<div class="trow">' +
+          '<span class="lbl">Total Block Hours</span>' +
+          '<span class="figs"><b class="val">0:00</b><span class="sub"></span></span>' +
+        '</div>' +
+        '<div class="trow">' +
+          '<span class="lbl">After Swap</span>' +
+          '<span class="figs"><b class="val val-after">0:00</b></span>' +
+        '</div>' +
       '</div>' +
     '</div>';
 
@@ -1818,6 +1859,7 @@ function addCrew(data){
       })));
     }
     updateSelCount(el);
+    updatePartyTotals();
     updateSummary();
   });
 
