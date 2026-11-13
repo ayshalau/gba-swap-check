@@ -1562,27 +1562,57 @@ function updatePartyTotals(){
 /* A swap is only allowed on the same date, so the two sides of the request
    always carry the same days. Ticking a duty day ticks the same date on the
    other crew member as well, and clearing it clears the other side too.
-   changes: [{ date:"2026-11-03", on:true }, ...] */
-function syncSameDateTicks(changes){
+   changes: [{ date:"2026-11-03", on:true }, ...]
+   It reports what it did, so the app can say so. */
+function syncSameDateTicks(changes, sourceParty){
   const list = (changes || []).filter(c => c && c.date);
-  if(!list.length) return;
+  const out = { moved: [], blocked: [] };
+  if(!list.length) return out;
   const parties = [...document.querySelectorAll("#parties .party")];
   const touched = [];
   parties.forEach(party => {
     let changed = false;
+    const nameEl = party.querySelector(".c-name");
+    const name = (nameEl && nameEl.value.trim()) || "The other crew member";
     party.querySelectorAll(".duty-day").forEach(d => {
       const box = d.querySelector(".d-check");
-      if(!box || box.disabled) return;          /* a locked day is never ticked */
+      if(!box) return;
       const date = d.querySelector(".d-date").value;
       const hit = list.find(c => c.date === date);
-      if(!hit || box.checked === hit.on) return;
+      if(!hit) return;
+      if(box.disabled){
+        /* the other crew member cannot swap that day - say why it stays
+           unticked instead of leaving it silent */
+        if(party !== sourceParty){
+          const noteEl = d.querySelector(".lock-note");
+          out.blocked.push({ date: date, name: name, note: (noteEl && noteEl.textContent) || "not swappable" });
+        }
+        return;                                  /* a locked day is never ticked */
+      }
+      if(box.checked === hit.on) return;
       box.checked = hit.on;
       d.dataset.selected = hit.on ? "1" : "0";
       changed = true;
+      out.moved.push({ date: date, name: name, on: hit.on });
     });
     if(changed) touched.push(party);
   });
   touched.forEach(p => updateSelCount(p));
+  return out;
+}
+
+/* Say what the pairing did, so it is clear that the same date was ticked for
+   the other crew member as well. */
+function showSyncNote(res){
+  if(!res) return;
+  if(res.moved.length){
+    const m = res.moved[0];
+    const more = res.moved.length > 1 ? " and " + (res.moved.length - 1) + " more" : "";
+    toast(rosterDate(m.date) + (m.on ? " ticked for " : " cleared for ") + m.name + more);
+  } else if(res.blocked.length){
+    const b = res.blocked[0];
+    toast(b.name + " cannot swap " + rosterDate(b.date) + " — " + b.note);
+  }
 }
 
 /* A summary of the request: how many crew members, how many duty days, and
@@ -1714,17 +1744,26 @@ function addDutyDay(crewEl, data){
   });
   /* the tick decides whether this duty day is checked */
   el.querySelector(".d-check").addEventListener("change", ev => {
-    el.dataset.selected = ev.target.checked ? "1" : "0";
-    /* a swap is only allowed on the same date, so the same date on the other
-       crew member is ticked (or cleared) as well */
-    syncSameDateTicks([{
-      date: el.querySelector(".d-date").value,
-      on: ev.target.checked
-    }]);
-    updateSelCount(el.closest(".party"));
-    /* the other crew member takes in these block hours, so its figure moves too */
-    updatePartyTotals();
-    updateSummary();
+    const box = ev.target;
+    const party = el.closest(".party");
+    /* The state is read again on the next tick: some browsers report the
+       change before the box has been committed, and the pairing has to follow
+       what the crew member sees on screen. */
+    setTimeout(() => {
+      const on = box.checked;
+      el.dataset.selected = on ? "1" : "0";
+      /* a swap is only allowed on the same date, so the same date on the other
+         crew member is ticked (or cleared) as well */
+      const res = syncSameDateTicks([{
+        date: el.querySelector(".d-date").value,
+        on: on
+      }], party);
+      updateSelCount(party);
+      /* the other crew member takes in these block hours, so its figure moves too */
+      updatePartyTotals();
+      updateSummary();
+      showSyncNote(res);
+    }, 0);
   });
   /* the duty code decides the type, and a day off hides its other fields */
   el.querySelector(".d-flight").addEventListener("input", () => {
@@ -1856,15 +1895,17 @@ function addCrew(data){
     /* Selecting all also selects the same dates on the other crew member.
        Clearing stays on this crew alone — it must not wipe the other crew
        member's request as well. */
+    let res = null;
     if(anyOff){
-      syncSameDateTicks(free.map(b => ({
+      res = syncSameDateTicks(free.map(b => ({
         date: b.closest(".duty-day").querySelector(".d-date").value,
         on: true
-      })));
+      })), el);
     }
     updateSelCount(el);
     updatePartyTotals();
     updateSummary();
+    showSyncNote(res);
   });
 
   document.getElementById("parties").appendChild(el);
