@@ -793,6 +793,7 @@
       </div>
 
       <div class="row-actions">
+        <button class="btn btn-ghost" id="ocr-add-flight">Add Flight Duty</button>
         <button class="btn btn-ghost hidden" id="ocr-clear">Clear</button>
       </div>
 
@@ -825,7 +826,6 @@
       </div>
 
       <div class="row-actions">
-        <button class="btn btn-ghost" id="ocr-add-flight">Add Flight Duty</button>
         <button class="btn btn-primary" id="ocr-apply-a">Add to Swap Check (Crew A)</button>
         <button class="btn btn-primary" id="ocr-apply-b">Add to Swap Check (Crew B)</button>
       </div>
@@ -3405,6 +3405,7 @@ function renderOcrRows(){
           field.classList.remove("low");
           if(key === "date" && !r.date) field.classList.add("low");
         }
+        updateOcrCount();
         renderRosterPreview(currentRosterRecords());
       });
     };
@@ -3482,6 +3483,11 @@ function renderOcrRows(){
     el.appendChild(main);
     host.appendChild(el);
   });
+  updateOcrCount();
+}
+
+/* The count of the extracted rows, and how many still need a date. */
+function updateOcrCount(){
   document.getElementById("ocr-count").textContent =
     ocrRows.length + " row(s)" + (ocrRows.filter(r=>!r.date).length ? " — some need a date" : "");
 }
@@ -4103,7 +4109,17 @@ function currentRosterRecords(){
      roster sheet uses (start on the first sector, end + total period on the last).
      A row that has not been filled in yet is left out of the preview. */
   const rows = ocrRows.filter(r => r.date || r.flight || r.sector || r.start || r.end || r.dep || r.arr);
-  return combineDutyDays(rows.map(ocrRowToRoster));
+  /* the roster is shown from the oldest date, so a flight that was added by
+     hand lands in its place; a row with no date yet is left at the end */
+  const sorted = rows.map((r,i) => ({ r:r, i:i })).sort((a,b) => {
+    const da = a.r.date || "", db = b.r.date || "";
+    if(!da && !db) return a.i - b.i;
+    if(!da) return 1;
+    if(!db) return -1;
+    if(da !== db) return da < db ? -1 : 1;
+    return a.i - b.i;
+  }).map(x => x.r);
+  return combineDutyDays(sorted.map(ocrRowToRoster));
 }
 
 /* How many days off the roster holds, by code: a day off, the day off requested
@@ -4293,8 +4309,12 @@ if(matchMedia("(pointer:coarse)").matches){
 
 document.getElementById("ocr-add-flight").addEventListener("click", () => {
   ocrClearError();
+  /* the editor is opened even when no PDF has been read, so a flight can be
+     typed in by hand */
+  document.getElementById("ocr-result-panel").classList.remove("hidden");
+  document.getElementById("ocr-clear").classList.remove("hidden");
   addFlightRow();
-  toast("Flight duty added — fill in the date, flight number and times");
+  toast("Flight duty added - fill in the date, flight number and times");
 });
 
 document.getElementById("ocr-clear").addEventListener("click", () => {

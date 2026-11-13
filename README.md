@@ -20,6 +20,11 @@ request from it.
 The **Roster Import** tab takes a roster PDF. Everything is read locally in the
 browser — nothing is sent to a server.
 
+A duty can also be **typed in by hand**: press **Add Flight Duty** under the drop zone and the
+Extracted Duty Days editor opens with an empty row — no PDF needed. Fill in the date, the duty
+code, the sector, the times and the block hour, and it joins the roster preview, the tally and
+the exports like any other row. **Clear** empties the whole editor again.
+
 ### PDF roster (recommended)
 
 A text-based PDF (exported from Excel or another app) is read with pdf.js:
