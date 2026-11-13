@@ -909,7 +909,7 @@ const DEFAULT_RULES = [
   /* --- 2. Swap Limitations --- */
   { group:"2. Swap Limitations", id:"minBlockHours", on:true, label:"Minimum Block Hours for Swap-Out",
     value:50, unit:"h", numeric:true,
-    text:"If the total block hours on roster stage or after swapping is <b>below 50 hours</b>, swapping-out block hours is not allowed, except:<br>" +
+    text:"Block hours are counted for each calendar month on its own, from the <b>1st day of the month to its last day</b>. If the total for that month on roster stage or after swapping is <b>below 50 hours</b>, swapping-out block hours is not allowed, except:<br>" +
          "• DO to DO swaps<br>• Duty swap with same block hours<br>• Swap-in duty with higher block hours" },
   { group:"2. Swap Limitations", id:"allowBlockSame", on:true, label:"Allow Swap With Same Block Hours",
     value:1, unit:"", numeric:false,
@@ -2012,37 +2012,63 @@ function validate(data){
     const minBlock = ruleNum("minBlockHours", 50);
     const label = c => c.name || ("Crew member");
 
-    /* total block hours for each crew member's duty days in this request */
-    const totalOf = c => (c.duties||[]).reduce((s,d) => s + (d.block === "" || d.block == null ? 0 : num(d.block)), 0);
-    const blocks = crews.map(totalOf);
+    /* Block hours are counted for each calendar month on its own — from the
+       1st day of the month to its last day. A request that spans a month
+       boundary therefore gives one figure per month, and the minimum is
+       judged against the month the duty falls in, not a total across months. */
+    const monthOf = d => {
+      const m = /^(\d{4})-(\d{2})/.exec(d.date || "");
+      return m ? m[1] + "-" + m[2] : "";
+    };
+    const monthName = key => {
+      if(!key) return "a duty with no date";
+      const d = new Date(key + "-01T00:00:00");
+      if(isNaN(d)) return key;
+      const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+      return mon + " " + d.getFullYear();
+    };
+    const blockOf = d => (d.block === "" || d.block == null ? 0 : num(d.block));
+    /* one total per crew member, per calendar month */
+    const monthBlocks = crews.map(c => {
+      const out = {};
+      (c.duties || []).forEach(d => {
+        const k = monthOf(d);
+        out[k] = (out[k] || 0) + blockOf(d);
+      });
+      return out;
+    });
+
+    /* a DO-to-DO swap carries no block hours */
+    const allDo = crews.every(c => (c.duties||[]).length > 0 && c.duties.every(d => d.type === "DO"));
 
     /* every crew member involved in the swap */
     for(let i = 0; i < crews.length; i++){
-      const outH = blocks[i];
       const outName = label(crews[i]);
+      const mine = monthBlocks[i];
 
-      /* a DO-to-DO swap carries no block hours */
-      const allDo = crews.every(c => (c.duties||[]).length > 0 && c.duties.every(d => d.type === "DO"));
+      /* the months this crew member would swap block hours out of */
+      Object.keys(mine).sort().forEach(key => {
+        const outH = mine[key];
+        if(outH <= 0) return;                    /* nothing to swap out */
+        if(outH >= minBlock) return;             /* at or above the minimum */
 
-      /* the block hours this crew member would swap IN */
-      const swapInH = crews.reduce((s, c, j) => j === i ? s : s + blocks[j], 0);
+        /* the block hours this crew member would swap IN for that same month */
+        const swapInH = crews.reduce((s, c, j) => j === i ? s : s + (monthBlocks[j][key] || 0), 0);
 
-      if(outH <= 0) continue; /* nothing to swap out */
-      if(outH >= minBlock) continue; /* at or above the minimum — always allowed */
+        /* Below the minimum: check the exceptions */
+        const doToDo = allDo && ruleOn("allowDoToDo");
+        const sameBlock = ruleOn("allowBlockSame") &&
+          crews.every((c, j) => (monthBlocks[j][key] || 0) === outH);
+        const higher = ruleOn("allowBlockHigher") && swapInH > outH;
 
-      /* Below the minimum: check the exceptions */
-      const doToDo = allDo && ruleOn("allowDoToDo");
-      const sameBlock = ruleOn("allowBlockSame") && blocks.every(b => b === outH);
-      const higher = ruleOn("allowBlockHigher") && swapInH > outH;
+        if(doToDo || sameBlock || higher) return;
 
-      if(doToDo) continue;
-      if(sameBlock) continue;
-      if(higher) continue;
-
-      issues.push({
-        ok:false,
-        text:"Block hours: "+outName+" would swap out "+round2(outH)+"h, below the "+minBlock+"h minimum, and swaps in "+round2(swapInH)+
-             "h. Swapping-out block hours is not allowed unless it is a DO to DO swap, a duty swap with the same block hours, or a swap-in duty with higher block hours."
+        issues.push({
+          ok:false,
+          text:"Block hours: "+outName+" would swap out "+round2(outH)+"h in "+monthName(key)+
+               ", below the "+minBlock+"h minimum for that month, and swaps in "+round2(swapInH)+
+               "h that month. Swapping-out block hours is not allowed unless it is a DO to DO swap, a duty swap with the same block hours, or a swap-in duty with higher block hours."
+        });
       });
     }
   }
