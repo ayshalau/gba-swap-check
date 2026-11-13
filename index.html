@@ -1441,28 +1441,61 @@ function unswapableCodes(code){
   return out;
 }
 
+/* Why a duty day cannot be ticked: either its own code is not swappable, or
+   the other crew member has a duty on the same date that is not swappable —
+   a swap on that date would have to give up a duty that cannot be swapped.
+   Returns null when the day can be ticked. */
+function swapLockInfo(el){
+  const box = el.querySelector(".d-check");
+  if(!box) return null;
+  const code = (el.querySelector(".d-flight").value || "").trim();
+  const own = unswapableCodes(code);
+  if(own.length){
+    return { note: own[0].note, title: own[0].label + " cannot be swapped" };
+  }
+  /* the other crew member on the same date */
+  const date = el.querySelector(".d-date").value;
+  if(!date) return null;
+  const party = el.closest(".party");
+  const others = [...document.querySelectorAll("#parties .party")].filter(p => p !== party);
+  for(const other of others){
+    const nameEl = other.querySelector(".c-name");
+    const name = (nameEl && nameEl.value.trim()) || "The other crew member";
+    for(const d of other.querySelectorAll(".duty-day")){
+      if(d.querySelector(".d-date").value !== date) continue;
+      const hits = unswapableCodes((d.querySelector(".d-flight").value || "").trim());
+      if(!hits.length) continue;
+      return {
+        note: "Not swappable — " + name + " has a locked duty that day",
+        title: name + " has " + hits[0].label + " on " + rosterDate(date) + ", so this duty day cannot be swapped"
+      };
+    }
+  }
+  return null;
+}
+
 /* A day that cannot be swapped is locked off: the tick is disabled and a note
    under the duty code says why, so the request cannot be built with it in. */
 function syncSwapLock(el){
   const box = el.querySelector(".d-check");
   if(!box) return;
-  const code = (el.querySelector(".d-flight").value || "").trim();
-  const hits = unswapableCodes(code);
-  const locked = hits.length > 0;
+  const info = swapLockInfo(el);
+  const locked = !!info;
   box.disabled = locked;
   if(locked) box.checked = false;
   el.dataset.selected = (!locked && box.checked) ? "1" : "0";
   el.classList.toggle("locked", locked);
   const note = el.querySelector(".lock-note");
-  if(note) note.textContent = locked ? hits[0].note : "";
+  if(note) note.textContent = locked ? info.note : "";
   const lab = el.querySelector(".duty-check");
   if(lab) lab.title = locked
-    ? (hits[0].label + " cannot be swapped")
+    ? info.title
     : "Include this duty day in the swap check";
 }
 
-/* Re-apply the locks to every duty day on screen — called when a rule that
-   governs them is switched on or off in the Rules tab. */
+/* Re-apply the locks to every duty day on screen - called when a rule that
+   governs them is switched on or off in the Rules tab, and whenever a card
+   changes, because a duty day can also be locked by the other crew member. */
 function refreshSwapLocks(){
   document.querySelectorAll("#parties .duty-day").forEach(syncSwapLock);
   document.querySelectorAll("#parties .party").forEach(updateSelCount);
@@ -1498,6 +1531,8 @@ function addDutyDay(crewEl, data){
   el.querySelector(".row-del").addEventListener("click", () => {
     const party = el.closest(".party");
     el.remove();
+    /* removing a locked day can free the same date on the other crew member */
+    refreshSwapLocks();
     updateSelCount(party);
     updateSummary();
   });
@@ -1518,8 +1553,8 @@ function addDutyDay(crewEl, data){
     el.dataset.dutyType = dutyTypeFromCode(el.querySelector(".d-flight").value);
     syncDutyFields(el);
     syncDutyType(el);
-    syncSwapLock(el);
-    updateSelCount(el.closest(".party"));
+    /* the code can lock this card and the same date on the other crew member */
+    refreshSwapLocks();
   });
   /* a flight with no printed block hour gets one from its duty times */
   ["start","end"].forEach(k => {
@@ -1533,7 +1568,11 @@ function addDutyDay(crewEl, data){
       updatePartyTotal(el.closest(".party"));
     });
   });
-  el.querySelector(".d-date").addEventListener("change", () => updateDutyDateLabel(el));
+  el.querySelector(".d-date").addEventListener("change", () => {
+    updateDutyDateLabel(el);
+    /* the date decides which day the other crew member is paired with */
+    refreshSwapLocks();
+  });
   /* clicking the day number opens the date picker */
   el.querySelector(".duty-date").addEventListener("click", () => {
     /* on iOS the field itself takes the tap and the native wheel opens; a
@@ -1547,7 +1586,8 @@ function addDutyDay(crewEl, data){
   updateDutyDateLabel(el);
   syncDutyFields(el);
   syncDutyType(el);
-  syncSwapLock(el);
+  /* the new card can lock the same date on the other crew member */
+  refreshSwapLocks();
   return el;
 }
 
@@ -1607,6 +1647,8 @@ function addCrew(data){
   });
   el.querySelector(".c-name").addEventListener("input", ev => {
     el.querySelector(".crew-name-label").textContent = ev.target.value || "Crew Member";
+    /* the lock note names the other crew member */
+    refreshSwapLocks();
   });
   /* tick or clear every duty day of this crew member */
   el.querySelector(".sel-all").addEventListener("click", () => {

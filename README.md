@@ -226,6 +226,12 @@ with the code `A`, while those rules are on — are left out of the count and ou
 selected · 7 not swappable"* with **Clear** means the 23 swappable days are all ticked and the
 button unticks them.
 
+A duty day is also locked when **the other crew member has a locked duty on the same date** —
+a swap on that date would have to give up a duty that cannot be swapped. The card then says
+*"Not swappable — Chan Tai Man has a locked duty that day"*, and tapping the tick does
+nothing. The lock lifts as soon as the locked day on the other side is removed, its code is
+changed, or the date is changed.
+
 Because a swap is only allowed on the same date, **the two sides of the request follow each
 other**: ticking a duty day ticks the same date on the other crew member as well, and unticking
 it unticks the other side too. **Select all** also selects the same dates on the other crew
