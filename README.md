@@ -430,6 +430,7 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 - A single DO must include 2 local nights and be at least 34 hours. A local night is 8
   hours falling between 2200 and 0800 local time. An additional consecutive DO must be at
   least 24 hours.
+- The maximum number of consecutive DO allowed is **4**.
 - A DO cannot be followed by duty earlier than 0600.
 - Duty end time is 30 minutes after STA / ATA or end of standby duty period.
 - Any swap resulting in a duty end beyond 2330L before a DO is not approved.
@@ -442,8 +443,6 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
   than 1200L; after standby starting 1200L or onwards, earlier than 1500L.
 - D2 and D3 following standby H10 on D1 can only be Flight / Standby duties — not DO,
   training, SNY, GD or company-assigned special duty.
-- PRC crew swapping in DYG / CKG / ENH flight or standby duties may not be accommodated;
-  swap quota is not deducted.
 
 **4. Rest Period**
 - Rest commences 30 minutes after actual time of arrival (ATA).
@@ -476,7 +475,9 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
   only looked at when the form holds a card for **every day in it**, so a form that is only partly
   filled is never judged on it. **A day off, a day off requested (`DO-R`) and an annual leave all
   count as a day off.**
-- The old **Maximum Consecutive Days Off (4)** rule was replaced by these four.
+- The old **Maximum Consecutive Days Off (4)** rule was replaced by these four, and has since been
+  added back in group 3 as **Maximum Number of Consecutive Days Off (DO)** — the longest run of
+  days off in the request may not be longer than 4.
 
 ## Running
 
