@@ -392,11 +392,18 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 
 **2. Swap Limitations**
 - Block hours are counted **per calendar month**, from the 1st day of the month to its last
-  day. If the total for the month on roster stage or after swapping is below 50 hours,
-  swapping-out block hours is not allowed — except DO-to-DO swaps, duty swaps with the same
-  block hours, and swap-in duty with higher block hours. A request that spans two months is
+  day. A duty may only be swapped out when the crew member is over the minimum in that month
+  **and is still over it after the swap** — that is, when both crew members are over 50 hours in
+  that month and both are still over 50 hours after the swap. The figures used are the block
+  hours of every duty day on the form for that month (on roster stage), less the block hours of
+  the ticked days that are swapped out, plus the block hours that are swapped in. Below the
+  minimum, swapping-out block hours is not allowed — except DO-to-DO swaps, duty swaps with the
+  same block hours, and swap-in duty with higher block hours. A request that spans two months is
   judged month by month, so 40h in November and 30h in December fails both months even though
   the 70h total is over the minimum.
+- So, for your November roster (59:40 on roster stage), swapping a 10:25 duty for another duty
+  is allowed as long as you are still over 50 hours afterwards: giving up 10:25 and taking in
+  0:30 leaves 49:45 (49.75h), and that is rejected.
 - **Annual Leave (AL) cannot be swapped** — it is not a duty day, so it can neither be swapped
   out nor taken in place of a duty. While the rule is on, an AL day cannot be ticked at all: the
   tick is locked and the card says "Annual leave — not swappable". The check also rejects a

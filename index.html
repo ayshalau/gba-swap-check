@@ -928,7 +928,7 @@ const DEFAULT_RULES = [
   /* --- 2. Swap Limitations --- */
   { group:"2. Swap Limitations", id:"minBlockHours", on:true, label:"Minimum Block Hours for Swap-Out",
     value:50, unit:"h", numeric:true,
-    text:"Block hours are counted for each calendar month on its own, from the <b>1st day of the month to its last day</b>. If the total for that month on roster stage or after swapping is <b>below 50 hours</b>, swapping-out block hours is not allowed, except:<br>" +
+    text:"Block hours are counted for each calendar month on its own, from the <b>1st day of the month to its last day</b>. A duty may only be swapped out when the crew member is over the minimum in that month <b>and is still over it after the swap</b> — that is, when both crew members are over 50 hours in that month and both are still over 50 hours after the swap. Below the minimum, swapping-out block hours is not allowed, except:<br>" +
          "• DO to DO swaps<br>• Duty swap with same block hours<br>• Swap-in duty with higher block hours" },
   { group:"2. Swap Limitations", id:"allowBlockSame", on:true, label:"Allow Swap With Same Block Hours",
     value:1, unit:"", numeric:false,
@@ -2153,7 +2153,18 @@ function validate(data){
       return mon + " " + d.getFullYear();
     };
     const blockOf = d => (d.block === "" || d.block == null ? 0 : num(d.block));
-    /* one total per crew member, per calendar month */
+
+    /* The block hours on roster stage: every duty day of the crew member on
+       the form, ticked or not, in that month. */
+    const rosterBlocks = crews.map(c => {
+      const out = {};
+      (c.allDuties || []).forEach(d => {
+        const k = monthOf(d);
+        out[k] = (out[k] || 0) + blockOf(d);
+      });
+      return out;
+    });
+    /* The block hours the crew member gives up in the swap: the ticked days. */
     const monthBlocks = crews.map(c => {
       const out = {};
       (c.duties || []).forEach(d => {
@@ -2175,10 +2186,17 @@ function validate(data){
       Object.keys(mine).sort().forEach(key => {
         const outH = mine[key];
         if(outH <= 0) return;                    /* nothing to swap out */
-        if(outH >= minBlock) return;             /* at or above the minimum */
 
+        /* the block hours this crew member has on roster stage that month */
+        const beforeH = rosterBlocks[i][key] || 0;
         /* the block hours this crew member would swap IN for that same month */
         const swapInH = crews.reduce((s, c, j) => j === i ? s : s + (monthBlocks[j][key] || 0), 0);
+        /* what the crew member would hold in that month after the swap */
+        const afterH = beforeH - outH + swapInH;
+
+        /* Both crew members are over the minimum in that month and both are
+           still over it after the swap — the swap-out is allowed. */
+        if(beforeH >= minBlock && afterH >= minBlock) return;
 
         /* Below the minimum: check the exceptions */
         const doToDo = allDo && ruleOn("allowDoToDo");
@@ -2188,11 +2206,16 @@ function validate(data){
 
         if(doToDo || sameBlock || higher) return;
 
+        const detail = round2(beforeH)+"h on roster stage, "+round2(outH)+"h swapped out, "+
+                       round2(swapInH)+"h swapped in, "+round2(afterH)+"h after the swap";
+        const text = beforeH >= minBlock
+          ? "Block hours: "+outName+" would have "+round2(afterH)+"h in "+monthName(key)+
+            " after the swap, below the "+minBlock+"h minimum for that month ("+detail+")."
+          : "Block hours: "+outName+" has "+round2(beforeH)+"h in "+monthName(key)+
+            " on roster stage, below the "+minBlock+"h minimum for that month ("+detail+").";
         issues.push({
           ok:false,
-          text:"Block hours: "+outName+" would swap out "+round2(outH)+"h in "+monthName(key)+
-               ", below the "+minBlock+"h minimum for that month, and swaps in "+round2(swapInH)+
-               "h that month. Swapping-out block hours is not allowed unless it is a DO to DO swap, a duty swap with the same block hours, or a swap-in duty with higher block hours."
+          text: text + " Swapping-out block hours is not allowed unless it is a DO to DO swap, a duty swap with the same block hours, or a swap-in duty with higher block hours."
         });
       });
     }
