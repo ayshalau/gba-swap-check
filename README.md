@@ -158,7 +158,8 @@ What the preview shows is exactly what the PDF contains. **Export Roster as PDF*
 file in a new page, where it can be viewed, printed or saved. If the popup is blocked the
 file is downloaded instead. Set the crew name first; the filename is
 `GBA-Roster-<crew>-<date>.pdf`. The PDF is A4 portrait and fits the whole roster on
-one page whenever it stays legible (row height shrinks down to 4 mm); a longer roster
+one page whenever it stays legible (the row height shrinks to use the page, down to
+3.4 mm, and the footer keeps its own room at the bottom); a much longer roster
 pages over normally.
 
 ### Editing and clearing rows
@@ -397,7 +398,8 @@ jsPDF:
   the next rows of the same date leave it blank, as the roster sheet does.
 - **Export Roster as PDF** opens the file in a new page (a download if the popup is
   blocked). Set the crew name first; the filename is `GBA-Roster-<crew>-<date>.pdf` and the
-  page is A4 portrait, holding the whole roster on one sheet when it fits legibly.
+  page is A4 portrait, holding the whole roster on one sheet — a full month fits on a single
+page, and only a much longer roster pages over.
 - **Export Roster as CSV** downloads the same table as `GBA-Roster-<crew>-<date>.csv` — one
   row per roster row (the date on the first flight of each duty day), with a final
   `Total Block Hours` row. The file opens directly in Excel.

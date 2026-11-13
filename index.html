@@ -3961,10 +3961,15 @@ async function exportRosterPdf(records, opts){
   y += tallyH + 4;
 
   /* Fit the whole roster on one A4 page when it stays legible: the row height
-     shrinks to use the page, down to 4 mm. A longer roster still pages over. */
+     shrinks to use the page, down to 3.4 mm. Only a much longer roster pages
+     over. The footer keeps its own room at the bottom. */
+  const footY = pageH - margin + 2;          /* the footer line */
+  const tableBottom = footY - 3;              /* the table stops above it */
   const tableRows = records.length + (records.length ? 1 : 0);   /* + totals row */
-  const bodySpace = (pageH - margin - 8) - (y + headH);
-  const rowH = tableRows ? Math.max(4, Math.min(6.2, bodySpace / tableRows)) : 6.2;
+  const bodySpace = tableBottom - (y + headH);
+  const rowH = tableRows ? Math.max(3.4, Math.min(6.2, bodySpace / tableRows)) : 6.2;
+  /* the text sits in the middle of its row, whatever the row height is */
+  const baseline = rowH/2 + Math.min(1.1, rowH * 0.19);
 
   /* ---- header row ---- */
   const drawHead = () => {
@@ -3994,7 +3999,7 @@ async function exportRosterPdf(records, opts){
   const bodyRecords = rosterDisplayRecords(records);
   bodyRecords.forEach((rec, ri) => {
     /* page break — repeat the header on each page */
-    if(y + rowH > pageH - margin - 8){
+    if(y + rowH > tableBottom){
       doc.addPage();
       y = margin;
       drawHead();
@@ -4012,9 +4017,9 @@ async function exportRosterPdf(records, opts){
         const opts2 = { align: c.align };
         if(c.align === "left"){
           opts2.maxWidth = colW[i] - 2;
-          doc.text(val, x + 1.2, y + rowH/2 + 1.1, opts2);
+          doc.text(val, x + 1.2, y + baseline, opts2);
         }else{
-          doc.text(val, x + colW[i]/2, y + rowH/2 + 1.1, opts2);
+          doc.text(val, x + colW[i]/2, y + baseline, opts2);
         }
       }
       x += colW[i];
@@ -4024,7 +4029,7 @@ async function exportRosterPdf(records, opts){
 
   /* ---- total block hours ---- */
   if(records.length){
-    if(y + rowH > pageH - margin - 8){
+    if(y + rowH > tableBottom){
       doc.addPage();
       y = margin;
       drawHead();
@@ -4040,14 +4045,13 @@ async function exportRosterPdf(records, opts){
     doc.setLineWidth(0.25);
     doc.rect(margin, y, labelW, rowH, "FD");
     doc.rect(margin + labelW, y, blockColW, rowH, "FD");
-    doc.text("Total Block Hours", margin + labelW - 2, y + rowH/2 + 1.1, { align:"right" });
+    doc.text("Total Block Hours", margin + labelW - 2, y + baseline, { align:"right" });
     doc.setFontSize(8);
-    doc.text(totalBlock, margin + labelW + blockColW/2, y + rowH/2 + 1.1, { align:"center" });
+    doc.text(totalBlock, margin + labelW + blockColW/2, y + baseline, { align:"center" });
     y += rowH;
   }
 
   /* ---- footer ---- */
-  const footY = pageH - margin + 2;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(95, 125, 128);
