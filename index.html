@@ -1235,8 +1235,8 @@ function updateDutyDateLabel(el){
   dom.textContent = String(d.getDate());
 }
 
-/* The duty type is worked out from the duty code: "DO", "AL" and the rest day
-   "DO-R" are days off, a standby code (H04, H14) is a standby, anything else is
+/* The duty type is worked out from the duty code: "DO", "AL" and the day off
+   requested "DO-R" are days off, a standby code (H04, H14) is a standby, anything else is
    a flight. */
 /* A card can hold more than one sector: "HB 702 → HB 703". The kind is taken
    from the first code that means something. */
@@ -1244,8 +1244,9 @@ function dutyCodes(code){
   return String(code || "").split(/→/).map(s => s.trim()).filter(Boolean);
 }
 
-/* The codes that are a day off: a day off, an annual leave and the rest day
-   DO-R (written DOR on some sheets). They all count as days off. */
+/* The codes that are a day off: a day off, a day off requested (DO-R, written
+   DOR on some sheets) and an annual leave. They all count as days off and
+   behave exactly the same. */
 function isDayOffCode(code){
   const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
   return s === "DO" || s === "AL" || s === "DO-R" || s === "DOR";
@@ -1261,7 +1262,7 @@ function dutyTypeFromCode(code){
 
 /* Some duty codes carry no duty times at all: a general duty, a no-duty
    assignment and a briefing. Their card shows the duty code on its own, with
-   no duty start and no duty end. The rest day DO-R is a day off, so it is
+   no duty start and no duty end. The day off requested (DO-R) is a day off, so it is
    handled with the other days off and not here. */
 function isNoTimeCode(code){
   const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
@@ -1272,7 +1273,7 @@ function isNoTimeCode(code){
      flight   — a flight number (HB 702)
      standby  — a standby code (H04, H14)
      other    — another ground duty (A, GD)
-     off      — a day off, a leave or a rest day (DO, AL, DO-R)
+     off      - a day off, a day off requested or a leave (DO, DO-R, AL)
      notime   — a duty with no duty times (DUTY, NDA, NB) */
 function dutyKindFromCode(code){
   const codes = dutyCodes(code);
@@ -3561,7 +3562,7 @@ function ocrRowToRoster(r){
   const hasDepArr = !!r.dep && !!r.arr;
   /* a standby or other non-flight duty has no departure / arrival at all */
   const noDepArr = !!r.noDepArr;
-  /* the printed code is kept as it is — a rest day stays "DO-R" in the sheet
+  /* the printed code is kept as it is — a day off requested stays "DO-R" in the sheet
      even though it counts as a day off */
   const dutyOut = isDO ? (dutyVal || "DO") : (r.flight || (isStby ? "STBY" : ""));
   return buildRosterRecord({
@@ -3618,8 +3619,9 @@ function totalBlockHours(records){
   return rosterDuration(mins);
 }
 
-/* The days off in a roster record: a day off, the rest day DO-R and an annual
-   leave. Each one is a day of its own on the roster. */
+/* The days off in a roster record: a day off, a day off requested (DO-R) and
+   an annual leave. Each one is a day of its own on the roster and counts as a
+   day off, the same as the others. */
 function rosterDayOffKind(duty){
   const s = String(duty || "").trim().toUpperCase();
   if(/^AL(\s|$)/.test(s)) return "al";
@@ -3628,14 +3630,14 @@ function rosterDayOffKind(duty){
   return "";
 }
 
-/* Count the duty days on a roster: a day off, a rest day and a leave are days
+/* Count the duty days on a roster: a day off, a day off requested and a leave are days
    off, not duty, so they are not counted, and several flights on the same date
    are one duty day. */
 function countRosterDutyDays(records){
   const seen = {};
   let count = 0;
   (records || []).forEach((rec, i) => {
-    /* a day off, a rest day and a leave are days off, not duty days */
+    /* a day off, a day off requested and a leave are days off, not duty days */
     if(rosterDayOffKind(rec.duty)) return;
     const key = rec.date || ("row" + i);
     if(seen[key]) return;
@@ -4002,8 +4004,8 @@ function currentRosterRecords(){
   return combineDutyDays(rows.map(ocrRowToRoster));
 }
 
-/* How many days off the roster holds, by code: a day off, the rest day DO-R
-   and an annual leave. Each one is a day of its own on the roster. */
+/* How many days off the roster holds, by code: a day off, the day off requested
+   DO-R and an annual leave. Each one is a day of its own on the roster. */
 function countRosterDayOffs(records){
   const out = { do:0, dor:0, al:0 };
   (records || []).forEach(rec => {
@@ -4210,7 +4212,7 @@ document.getElementById("ocr-clear").addEventListener("click", () => {
 /* The type of an imported row — the duty column decides it. */
 function rowDutyType(r){
   const dutyVal = (r.flight || "").toUpperCase();
-  /* a day off, an annual leave and the rest day DO-R are all days off */
+  /* a day off, a day off requested (DO-R) and an annual leave are all days off */
   if(isDayOffCode(dutyVal)) return "DO";
   if(dutyVal === "STBY") return "Standby";
   if(r.type === "Standby" || r.standby) return "Standby";

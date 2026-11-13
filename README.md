@@ -49,7 +49,7 @@ The GBA roster this is built for has these columns:
   UTC and is ignored.
 - `TYPE OF DUTY` carries the duty code: `OP - (FA4)` for a flight, `STB - H04` for
   standby, `OTH - A` / `OTH - GD` for other duties, and `DO` / `AL` for a day off or
-  leave. The rest day `DO-R` is read as a day off as well.
+  leave. The day off requested `DO-R` is read as a day off as well.
 - `S NO` and `REMARK` are ignored.
 
 If the PDF has no text layer (a scan), the reader says so — the PDF must contain
@@ -88,10 +88,12 @@ roster fields are filled from them like this:
   **Duty**: it carries no sector, no duty start and no duty end, and its card shows the duty
   code on its own. The rules still count it as a duty day, but the time-based rules skip it
   because it has no times.
-- The rest day `DO-R` (written `DOR` on some sheets) **counts as a Day Off**, the same as `DO`
-  and `AL`: it is added to the request as a **Day Off**, with no sector and no duty times, it
-  counts towards the days off entitlement, and the roster sheet keeps the printed code `DO-R` so
-  the rest day is still recognisable.
+- The rest day `DO-R` (written `DOR` on some sheets) is a **day off requested** — it counts as a
+  **Day Off**, exactly the same as `DO` and `AL`: it is added to the request as a **Day Off**,
+  with no sector and no duty times, it counts towards the days off entitlement, it is not a
+  duty day, and it can be swapped like any other day off. Only the roster sheet keeps the
+  printed code `DO-R`, so the requested day off is still recognisable, and the tally counts it
+  in its own `DO-R` column.
 - A two-sector duty day is one duty: Duty Start on the first sector row, Duty End and the
   total Duty Period on the last row, with the duty cells in between left blank.
 - Whatever headings the uploaded PDF uses, the imported roster is always shown in the
@@ -100,8 +102,8 @@ roster fields are filled from them like this:
   **Extracted Duty Days** editor; both are still read from the PDF and kept in the data.
 - Under the crew name field in the **Roster Preview** sits the tally of the uploaded roster: the
   duty days and the days off by code, for example *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL"*. `DO`,
-  the rest day `DO-R` and `AL` are each counted on their own, so the numbers add up to the days on
-  the roster. The tally is shown on a phone as well as on a desktop.
+  the day off requested `DO-R` and `AL` are each counted on their own, so the numbers add up to
+  the days on the roster. The tally is shown on a phone as well as on a desktop.
 
 The **Extracted Duty Days** rows show Date, Duty, Sector, Duty Start, Dep Time, Arr Time,
 Duty End, Duty Period and Block Hour. Times are entered as four digits (`0810`) and
@@ -472,8 +474,8 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 - These are **roster rules**, so they are measured on every duty day on the form for that crew
   member, not only on the ticked days — a swap is judged against the days around it. A window is
   only looked at when the form holds a card for **every day in it**, so a form that is only partly
-  filled is never judged on it. **A day off, an annual leave and the rest day `DO-R` all count as
-  a day off.**
+  filled is never judged on it. **A day off, a day off requested (`DO-R`) and an annual leave all
+  count as a day off.**
 - The old **Maximum Consecutive Days Off (4)** rule was replaced by these four.
 
 ## Running
