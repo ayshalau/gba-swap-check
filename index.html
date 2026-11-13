@@ -160,6 +160,22 @@
   /* the name field and the buttons beside it */
   .party-ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0;flex:1 1 auto}
   .party-body{padding:14px 12px}
+  /* the crew member's block-hour total, under all of their duty cards */
+  .party-total{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    margin-top:10px;padding:9px 12px;border-radius:10px;
+    background:var(--panel-2);border:1px solid var(--line);
+  }
+  .party-total .lbl{
+    font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;
+  }
+  .party-total .figs{text-align:right}
+  .party-total .val{
+    font-size:16px;font-weight:700;color:var(--gold-soft);
+    font-variant-numeric:tabular-nums;
+  }
+  .party-total .sub{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
   /* the crew member name field */
   .party-head .c-name{
     background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);
@@ -1333,6 +1349,35 @@ function updateSelCount(crewEl){
     btn.textContent = (free.length && on === free.length) ? "Clear" : "Select all";
     btn.disabled = !free.length;
   }
+  updatePartyTotal(crewEl);
+}
+
+/* The block hours of one crew member: every duty card added up, and the part
+   of that total on the days that are ticked for the swap. */
+function partyBlockTotals(crewEl){
+  let allMins = 0, selMins = 0;
+  [...crewEl.querySelectorAll(".duty-day")].forEach(el => {
+    const b = parseFloat(el.dataset.block || "");
+    if(!isFinite(b) || b <= 0) return;
+    const mins = Math.round(b * 60);
+    allMins += mins;
+    if(el.dataset.selected !== "0") selMins += mins;
+  });
+  return { all: allMins, sel: selMins };
+}
+
+/* Show the crew member's block-hour total under their duty cards. When some
+   days are left out of the swap, the ticked figure is shown beside it. */
+function updatePartyTotal(crewEl){
+  if(!crewEl) return;
+  const box = crewEl.querySelector(".party-total");
+  if(!box) return;
+  const t = partyBlockTotals(crewEl);
+  box.querySelector(".val").textContent = rosterDuration(t.all);
+  const sub = box.querySelector(".sub");
+  const differs = t.sel !== t.all;
+  sub.textContent = differs ? " · " + rosterDuration(t.sel) + " selected" : "";
+  sub.hidden = !differs;
 }
 
 /* A summary of the request: how many crew members, how many duty days, and
@@ -1415,7 +1460,12 @@ function addDutyDay(crewEl, data){
       '<button class="row-del" title="Remove duty day" aria-label="Remove duty day">×</button>' +
     '</div>';
 
-  el.querySelector(".row-del").addEventListener("click", () => el.remove());
+  el.querySelector(".row-del").addEventListener("click", () => {
+    const party = el.closest(".party");
+    el.remove();
+    updateSelCount(party);
+    updateSummary();
+  });
   /* the tick decides whether this duty day is checked */
   el.querySelector(".d-check").addEventListener("change", ev => {
     el.dataset.selected = ev.target.checked ? "1" : "0";
@@ -1439,6 +1489,7 @@ function addDutyDay(crewEl, data){
         el.querySelector(".d-start").value,
         el.querySelector(".d-end").value
       );
+      updatePartyTotal(el.closest(".party"));
     });
   });
   el.querySelector(".d-date").addEventListener("change", () => updateDutyDateLabel(el));
@@ -1501,6 +1552,10 @@ function addCrew(data){
         '</span>' +
       '</div>' +
       '<div class="duties"></div>' +
+      '<div class="party-total">' +
+        '<span class="lbl">Total Block Hours</span>' +
+        '<span class="figs"><b class="val">0:00</b><span class="sub"></span></span>' +
+      '</div>' +
     '</div>';
 
   el.querySelector(".c-add-day").addEventListener("click", () => {
