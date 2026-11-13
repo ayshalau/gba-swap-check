@@ -334,9 +334,15 @@ The app is built to work on a phone as well as a desktop, and is installable:
 - The duty card keeps the date column beside it and, on a phone, moves the date to a strip
   above the card. The remove button moves into that strip, and Duty Start/End sit side by side,
   which makes the card noticeably shorter.
-- The two duty times always get room for a whole "09:50 am" plus the clock icon, so a time is
+- The two duty times always get room for a whole "0810L" plus the clock icon, so a time is
   never cut off inside its box: on a computer they share the third line of the card, each taking
   half of it, and on a 320px phone they take a line each with the clock icon drawn smaller.
+- Every date and time box reads in the **roster's own format**, whatever the phone's language
+  is set to: a time as `0810L` and a date as `04-Nov-26`. The browser draws a native date or
+  time in the device's own format, so the app puts its own text over the field and hides the
+  native one — the picker still opens on a tap, and on a mouse-driven screen the native
+  segments come back while the field is being typed into. The date strip on a duty card keeps
+  the weekday and the day number, the way the crew roster app shows it.
 - Every field in a duty card is **the same height on a phone** — the duty code, the sector and
   the two times all sit in 44px boxes, the same height as the date strip above them, so a card
   reads as a grid. That holds in a narrow desktop window too, not only on a touch screen. The

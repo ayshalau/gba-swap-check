@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -224,6 +224,44 @@
   .duty-card .f-sector{grid-column:1/3}
   .duty-card .f-start{grid-column:1}
   .duty-card .f-end{grid-column:2}
+  /* The browser draws a date or a time in the device's own format, so the app
+     puts its own text over the field: the date as 04-Nov-26 and the time as
+     0810L, the way the roster sheet prints them. The native field stays
+     underneath, so the picker still opens on a tap. */
+  .field-own{position:relative;display:block;width:100%}
+  .field-own input{width:100%}
+  .field-own .field-text{
+    position:absolute;left:9px;right:9px;top:0;bottom:0;
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:none;font-size:13px;color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  /* a date reads from the left, like the other fields of the row */
+  .ocr-row .field-own .field-text{justify-content:flex-start}
+  /* the rule threshold keeps the width of its own input */
+  .rule-card .rule-line .val .field-own{display:inline-block;width:120px}
+  /* the native value is hidden - the text is made zero size, so even the
+     highlighted segment the browser draws stays out of the way */
+  .field-own input[type="date"],
+  .field-own input[type="time"]{color:transparent;font-size:0}
+  .field-own input[type="date"]::-webkit-date-and-time-value,
+  .field-own input[type="time"]::-webkit-date-and-time-value,
+  .field-own input[type="time"]::-webkit-datetime-edit{color:transparent}
+  /* the picker button keeps its own size, so it stays on show even though the
+     native value is hidden */
+  .field-own input[type="time"]::-webkit-calendar-picker-indicator,
+  .field-own input[type="date"]::-webkit-calendar-picker-indicator{
+    width:14px;height:14px;padding:0;margin-left:2px;opacity:.55;
+  }
+  @media (pointer:fine){
+    /* on a mouse-driven screen the native segments come back while the field
+       is being typed into, so the caret can be seen; on a touch screen the
+       app's own text stays and the picker covers the field */
+    .field-own input:focus{color:var(--ink);font-size:13px}
+    .field-own input:focus::-webkit-date-and-time-value,
+    .field-own input:focus::-webkit-datetime-edit{color:var(--ink)}
+    .field-own input:focus + .field-text{opacity:0}
+  }
   .duty-card .row-del{grid-column:3;grid-row:1;justify-self:end;align-self:end;margin:0}
   /* a day off or a leave shows only the duty code — the card keeps the same
      size as the others, but its duty field stays narrow */
@@ -525,6 +563,8 @@
     .rule-card .rule-line .val input,
     #filter-text,#filter-result,
     label.field input,label.field select,label.field textarea{font-size:16px}
+    /* the app's own date and time text is as large as the other fields */
+    .field-own .field-text{font-size:16px}
     .party-head .c-name,#filter-text,#filter-result{min-height:42px}
     .rule-card .rule-line .val input{min-height:42px}
     .btn{min-height:44px}
@@ -578,6 +618,8 @@
     .rule-card .rule-line .val input,
     #filter-text,#filter-result,
     label.field input,label.field select,label.field textarea{font-size:16px}
+    /* the app's own date and time text is as large as the other fields */
+    .field-own .field-text{font-size:16px}
     .party-head .c-name,#filter-text,#filter-result{min-height:42px}
     .rule-card .rule-line .val input{min-height:42px}
     .btn{min-height:44px}
@@ -635,6 +677,9 @@
        every box is the same height, and the value sits in the middle of it */
     .ocr-row input,.ocr-row select{height:44px;min-height:44px;text-align:center}
     .ocr-row input[type="date"]::-webkit-date-and-time-value{text-align:center}
+    /* the app's own date and time text sits in the middle of its box, like
+       the value it stands for */
+    .ocr-row .field-own .field-text{justify-content:center}
     /* the card uses two sizes: the duty code (which can hold a whole chain,
        "HB 702 → HB 703") and the sector are text and take a whole line, the
        two times are short and pair up at half a line */
@@ -1266,6 +1311,37 @@ function sortDutyDays(crewEl){
   sorted.forEach(el => box.appendChild(el));
 }
 
+/* The native date and time fields draw their value in the device's own format,
+   so the app shows its own text over them: the date as 04-Nov-26 and the time
+   as 0810L, the way the roster sheet prints them. The native field stays
+   underneath, so the picker still opens on a tap. */
+function fieldOwnText(input){
+  const box = input && input.closest(".field-own");
+  if(!box) return;
+  let text = box.querySelector(".field-text");
+  if(!text){
+    text = document.createElement("span");
+    text.className = "field-text";
+    box.appendChild(text);
+  }
+  const v = input.value || "";
+  text.textContent = input.type === "date" ? rosterDate(v) : rosterTime(v);
+}
+
+/* Keep the app's own text in step with a native date or time field. */
+function bindFieldOwnText(input){
+  if(!input) return;
+  fieldOwnText(input);
+  const upd = () => fieldOwnText(input);
+  input.addEventListener("input", upd);
+  input.addEventListener("change", () => {
+    upd();
+    /* the native picker is closed now, so the field lets go of the focus and
+       the app's own text stands on its own */
+    try{ input.blur(); }catch(e){}
+  });
+}
+
 /* A duty day that is a DO for the consecutive-days-off rule: a day off, and a
    day off requested (DO-R). An annual leave is not a DO, so it is left out. */
 function isDoDay(d){
@@ -1580,13 +1656,13 @@ function addDutyDay(crewEl, data){
     '<div class="duty-date" title="Change date">' +
       '<span class="dow"></span>' +
       '<span class="dom"></span>' +
-      '<input type="date" class="d-date" aria-label="Duty date" value="'+esc(d.date||"")+'">' +
+      '<input type="date" class="d-date" lang="en-GB" aria-label="Duty date" value="'+esc(d.date||"")+'">' +
     '</div>' +
     '<div class="duty-card">' +
       '<label class="f-duty">Duty<input type="text" class="d-flight" placeholder="HB 702" value="'+esc(d.flight||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"><span class="lock-note"></span></label>' +
       '<label class="f-sector">Sector<input type="text" class="d-sector" placeholder="HKG TPE" value="'+esc(d.sector||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"></label>' +
-      '<label class="f-start"><span class="lbl-text">Duty Start</span><input type="time" class="d-start" value="'+esc(d.start||"")+'"></label>' +
-      '<label class="f-end"><span class="lbl-text">Duty End</span><input type="time" class="d-end" value="'+esc(d.end||"")+'"></label>' +
+      '<label class="f-start"><span class="lbl-text">Duty Start</span><span class="field-own"><input type="time" class="d-start" value="'+esc(d.start||"")+'"><span class="field-text"></span></span></label>' +
+      '<label class="f-end"><span class="lbl-text">Duty End</span><span class="field-own"><input type="time" class="d-end" value="'+esc(d.end||"")+'"><span class="field-text"></span></span></label>' +
       '<button class="row-del" title="Remove duty day" aria-label="Remove duty day">×</button>' +
     '</div>';
 
@@ -1653,6 +1729,9 @@ function addDutyDay(crewEl, data){
   updateDutyDateLabel(el);
   syncDutyFields(el);
   syncDutyType(el);
+  /* the two times read in the roster's own 24-hour format */
+  bindFieldOwnText(el.querySelector(".d-start"));
+  bindFieldOwnText(el.querySelector(".d-end"));
   /* the cards are listed from the oldest date */
   sortDutyDays(crewEl);
   /* the new card can lock the same date on the other crew member */
@@ -2524,7 +2603,8 @@ function renderRules(){
         '<div class="rule-text">'+r.text+'</div>' +
         (editable
           ? '<div class="rule-line"><span class="lbl">Threshold</span><span class="val'+(r.unit?" with-unit":"")+'">' +
-              '<input type="'+(r.time?"time":"number")+'"'+(r.numeric && !r.time?' step="0.5" min="0"':'')+' class="r-val" aria-label="Rule value" value="'+esc(r.value)+'"> ' +
+              '<span class="field-own"><input type="'+(r.time?"time":"number")+'"'+(r.numeric && !r.time?' step="0.5" min="0"':'')+' class="r-val" aria-label="Rule value" value="'+esc(r.value)+'">' +
+              '<span class="field-text"></span></span> ' +
               (r.unit ? '<span class="unit">'+esc(r.unit)+'</span>' : "") +
             '</span></div>'
           : '<div class="rule-line"><span class="lbl">Setting</span><span class="val">'+(r.on?"Applied":"Skipped")+'</span></div>') +
@@ -2538,6 +2618,9 @@ function renderRules(){
     const r = rules.find(x => x.id === id);
     const onEl = card.querySelector(".r-on");
     const valEl = card.querySelector(".r-val");
+
+    /* a time threshold reads in the roster's own 24-hour format */
+    if(valEl && valEl.type === "time") bindFieldOwnText(valEl);
 
     onEl.addEventListener("change", () => {
       r.on = onEl.checked;
@@ -3363,7 +3446,7 @@ function renderOcrRows(){
     const main = document.createElement("div");
     main.className = "ocr-row";
     main.innerHTML =
-      '<label class="f f-date"><span class="cap">Date</span><input type="date" class="o-date" value="'+esc(r.date||"")+'"></label>' +
+      '<label class="f f-date"><span class="cap">Date</span><span class="field-own"><input type="date" class="o-date" value="'+esc(r.date||"")+'"><span class="field-text"></span></span></label>' +
       '<label class="f f-duty"><span class="cap">Duty</span><input type="text" class="o-flight" placeholder="Duty" value="'+esc(r.flight||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"></label>' +
       '<label class="f f-sector"><span class="cap">Sector</span><input type="text" class="o-sector" placeholder="Sector" value="'+esc(r.sector||"")+'" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"></label>' +
       '<label class="f f-start"><span class="cap">Duty Start</span><input type="text" inputmode="numeric" maxlength="5" class="o-start" placeholder="HHMM" value="'+esc(hmToDigits(r.start))+'"></label>' +
@@ -3482,6 +3565,8 @@ function renderOcrRows(){
 
     el.appendChild(main);
     host.appendChild(el);
+    /* the date reads in the roster's own format */
+    bindFieldOwnText(main.querySelector(".o-date"));
   });
   updateOcrCount();
 }
