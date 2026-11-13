@@ -942,12 +942,9 @@ const DEFAULT_RULES = [
   { group:"2. Swap Limitations", id:"noAnnualLeaveSwap", on:true, label:"Annual Leave (AL) Cannot Be Swapped",
     value:1, unit:"", numeric:false,
     text:"<b>Annual Leave (AL)</b> is not a duty day, so it cannot be swapped — neither swapped out nor taken in place of a duty. An AL day ticked in a swap request is rejected: untick it and swap an actual duty day instead." },
-  { group:"2. Swap Limitations", id:"noNbNdaSwap", on:true, label:"NB / NDA Cannot Be Swapped",
+  { group:"2. Swap Limitations", id:"noNbNdaSwap", on:true, label:"NB / NDA / Duty A Cannot Be Swapped",
     value:1, unit:"", numeric:false,
-    text:"<b>NB</b> and <b>NDA</b> carry no duty — the crew member is not rostered to work them — so they cannot be swapped, neither swapped out nor taken in place of a duty. While the rule is on, an NB or NDA day cannot be ticked at all: the tick is locked and the card says \"No duty assignment — not swappable\". The check also rejects a request that carries one." },
-  { group:"2. Swap Limitations", id:"noDutyASwap", on:true, label:"Duty A Cannot Be Swapped",
-    value:1, unit:"", numeric:false,
-    text:"A duty with the code <b>A</b> cannot be swapped, neither swapped out nor taken in place of another duty. While the rule is on, an A day cannot be ticked at all: the tick is locked and the card says \"Duty A — not swappable\". The check also rejects a request that carries one." },
+    text:"<b>NB</b> and <b>NDA</b> carry no duty — the crew member is not rostered to work them — and a duty <b>A</b> is a ground duty that cannot be swapped either. None of them can be swapped, neither swapped out nor taken in place of a duty. While the rule is on, an NB, NDA or A day cannot be ticked at all: the tick is locked and the card says \"No duty assignment — not swappable\" (or \"Duty A — not swappable\"). The check also rejects a request that carries one." },
 
   /* --- 3. DO and Standby Duty --- */
   { group:"3. Day Off (DO) and Standby Duty", id:"doMinHours", on:true, label:"Minimum DO Length",
@@ -962,7 +959,7 @@ const DEFAULT_RULES = [
     text:"An additional consecutive day off that follows must be of at least <b>24 hours</b>." },
   { group:"3. Day Off (DO) and Standby Duty", id:"maxConsecDo", on:true, label:"Maximum Number of Consecutive Days Off (DO)",
     value:4, unit:"days", numeric:true,
-    text:"The maximum number of consecutive DO allowed is <b>4</b>. A day off requested (<b>DO-R</b>) counts as a DO, and so does an annual leave." },
+    text:"The maximum number of consecutive DO allowed is <b>4</b>. A day off requested (<b>DO-R</b>) counts as a DO; an annual leave (<b>AL</b>) does not." },
   { group:"3. Day Off (DO) and Standby Duty", id:"doEarliestStart", on:true, label:"Earliest Duty Start After DO",
     value:"06:00", unit:"", numeric:false, time:true,
     text:"A DO cannot be followed by duty earlier than <b>0600</b>." },
@@ -1252,11 +1249,12 @@ function isDayOffCode(code){
 }
 
 /* A duty day that is a DO for the consecutive-days-off rule: a day off, and a
-   day off requested (DO-R). An annual leave is not a DO. */
+   day off requested (DO-R). An annual leave is not a DO, so it is left out. */
 function isDoDay(d){
   if(!d) return false;
-  if(d.type === "DO") return true;
   const s = String(d.flight || "").trim().toUpperCase().replace(/\s+/g, "");
+  if(s === "AL") return false;              /* an annual leave is not a DO */
+  if(d.type === "DO") return true;
   return s === "DO" || s === "DO-R" || s === "DOR";
 }
 
@@ -1443,7 +1441,7 @@ function unswapableCodes(code){
       out.push({ code:s, label:"Annual Leave (AL)", note:"Annual leave — not swappable" });
     } else if((s === "NB" || s === "NDA") && ruleOn("noNbNdaSwap")){
       out.push({ code:s, label:(s === "NB" ? "NB" : "NDA") + " (no duty assignment)", note:"No duty assignment — not swappable" });
-    } else if(s === "A" && ruleOn("noDutyASwap")){
+    } else if(s === "A" && ruleOn("noNbNdaSwap")){
       out.push({ code:s, label:"Duty A", note:"Duty A — not swappable" });
     }
   });
@@ -1979,7 +1977,7 @@ function validate(data){
        that carries no duty at all (NB, NDA), or a duty A. The check looks at
        the code on the card, so it flags the leave or the assignment, not the
        days off that can be swapped. */
-    if(ruleOn("noAnnualLeaveSwap") || ruleOn("noNbNdaSwap") || ruleOn("noDutyASwap")){
+    if(ruleOn("noAnnualLeaveSwap") || ruleOn("noNbNdaSwap")){
       duties.forEach(d => {
         unswapableCodes(d.flight).forEach(hit => {
           issues.push({ ok:false, who, text:who+": "+fmtDate(d.date)+" is "+hit.label+", which cannot be swapped." });
@@ -2455,7 +2453,7 @@ function renderRules(){
       saveRules();
       updateHint();
       /* the locks follow the rules, so the duty days are re-checked */
-      if(r.id === "noAnnualLeaveSwap" || r.id === "noNbNdaSwap" || r.id === "noDutyASwap") refreshSwapLocks();
+      if(r.id === "noAnnualLeaveSwap" || r.id === "noNbNdaSwap") refreshSwapLocks();
     });
     if(valEl){
       valEl.addEventListener("change", () => {
