@@ -278,9 +278,13 @@ each crew member is taken into account: the rules that judge a working pattern �
 period, the hours in 7, 14 and 28 days, the days on duty, the days off, the day-off and
 standby rules — are measured on the crew member's **whole roster with the swap applied**. The
 days that are not swapped away stay as they are, and the days that are swapped away come back
-as the other crew member's duty. So ticking a duty for the swap also brings the rest of the
-uploaded roster into the check: a roster that breaks a rule is reported, and swapping the
-offending day can fix it. The rules themselves are unchanged and still listed in the Rules tab.
+as the other crew member's duty.
+
+**The selected (ticked) days are the focus of the check.** A finding is only reported when it
+touches one of the days in the request, so the rest of the uploaded roster is used as the
+context and a problem on a day that is not part of the swap does not reject the request — it
+belongs to the roster, not to the swap. Swap that day instead and the finding appears. The
+rules themselves are unchanged and still listed in the Rules tab.
 
 The request details - Requester Name, Position, Base and Reason - are no longer asked for.
 The requester is taken from the first crew member listed, and the Rule "Reason Mandatory"

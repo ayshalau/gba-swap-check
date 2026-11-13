@@ -1990,6 +1990,12 @@ function validate(data){
        only the ticked days of the request. */
     const others = crews.filter(c => c !== crew);
     const roster = postSwapRoster(crew, others);
+    /* The ticked days are the focus of the check: a finding is only reported
+       when it touches one of them. The other uploaded duties are the context
+       the rules are measured against - a problem on a day that is not part of
+       the swap is left to the roster, not to the swap request. */
+    const focus = new Set(duties.map(d => d.date));
+    const focused = dates => (Array.isArray(dates) ? dates : [dates]).some(d => d && focus.has(d));
 
     /* Rule 1 — number of duty days, consecutive or individual */
     if(duties.length){
@@ -2035,6 +2041,7 @@ function validate(data){
       const minDoH = ruleOn("doMinHours") ? ruleNum("doMinHours", 34) : 0;
       const minNights = ruleOn("doMinNights") ? ruleNum("doMinNights", 2) : 0;
       doDays.forEach(d => {
+        if(!focused(d.date)) return;              /* only the selected days */
         const startHm = d.start || "22:00";
         const endHm = d.end || "";
         const h = doDurationHours(startHm, endHm, minDoH);
@@ -2056,6 +2063,7 @@ function validate(data){
         if(cur.type === "DO" || nxt.type !== "DO") continue;
         const gap = daysBetween(cur.date, nxt.date);
         if(gap !== 1) continue;
+        if(!focused([cur.date, nxt.date])) continue;   /* the selected day */
         const endMin = hmToMin(cur.end);
         if(endMin === null) continue;
         const eff = endMin; /* duty end already includes the STA/ATA buffer when entered */
@@ -2074,6 +2082,7 @@ function validate(data){
         if(cur.type !== "DO" || nxt.type === "DO") continue;
         const gap = daysBetween(cur.date, nxt.date);
         if(gap !== 1) continue;
+        if(!focused([cur.date, nxt.date])) continue;   /* the selected day */
         const s = hmToMin(nxt.start);
         if(s === null) continue;
         if(s < earliest){
@@ -2087,11 +2096,13 @@ function validate(data){
       const maxD = ruleNum("maxConsecDutyDays", 6);
       const allDays = roster.filter(d => d.date && d.type !== "DO");
       const dates = [...new Set(allDays.map(d => d.date))].sort();
-      let run = 0, best = 0;
+      /* the longest run of days on duty that involves a selected day */
+      let run = 0, runFocus = false, best = 0;
       for(let i = 0; i < dates.length; i++){
         if(i > 0 && daysBetween(dates[i-1], dates[i]) === 1) run++;
-        else run = 1;
-        best = Math.max(best, run);
+        else { run = 1; runFocus = false; }
+        if(focus.has(dates[i])) runFocus = true;
+        if(run > maxD && runFocus && run > best) best = run;
       }
       if(best > maxD){
         issues.push({ ok:false, who, text:who+": "+best+" consecutive days on duty exceeds the maximum of "+maxD+"." });
@@ -2103,11 +2114,12 @@ function validate(data){
       const limit = ruleTime("sixthDayEnd", 1260); /* 21:00 */
       const allDays = roster.filter(d => d.date && d.type !== "DO");
       const dates = [...new Set(allDays.map(d => d.date))].sort();
-      let run = 0;
+      let run = 0, runFocus = false;
       for(let i = 0; i < dates.length; i++){
         if(i > 0 && daysBetween(dates[i-1], dates[i]) === 1) run++;
-        else run = 1;
-        if(run === 6){
+        else { run = 1; runFocus = false; }
+        if(focus.has(dates[i])) runFocus = true;
+        if(run === 6 && runFocus){
           const d = allDays.find(x => x.date === dates[i]);
           const e = hmToMin(d && d.end);
           if(e !== null && e > limit){
@@ -2146,6 +2158,7 @@ function validate(data){
         const cur = sorted[i], nxt = sorted[i+1];
         if(cur.type !== "Standby" || nxt.type === "DO") continue;
         if(daysBetween(cur.date, nxt.date) !== 1) continue;
+        if(!focused([cur.date, nxt.date])) continue;   /* the selected day */
         const s = hmToMin(cur.start);
         const ns = hmToMin(nxt.start);
         if(s === null || ns === null) continue;
@@ -2169,6 +2182,7 @@ function validate(data){
         for(let k = 1; k <= span; k++){
           const nd = sorted.find(d => daysBetween(sb.date, d.date) === k);
           if(!nd) continue;
+          if(!focused([sb.date, nd.date])) continue;   /* the selected day */
           if(nd.type === "DO"){
             issues.push({ ok:false, who, text:who+": "+fmtDate(nd.date)+" (D"+(k+1)+" after standby H10) cannot be a DO after a swap." });
           }
@@ -2182,11 +2196,12 @@ function validate(data){
       /* the days off the crew member holds after the swap */
       const doDates = roster.filter(isDoDay).map(d => d.date).sort();
       let run = 0, best = 0, bestStart = "", bestEnd = "";
-      let start = "";
+      let start = "", runFocus = false;
       for(let i = 0; i < doDates.length; i++){
         if(i > 0 && daysBetween(doDates[i-1], doDates[i]) === 1) run++;
-        else { run = 1; start = doDates[i]; }
-        if(run > best){ best = run; bestStart = start; bestEnd = doDates[i]; }
+        else { run = 1; start = doDates[i]; runFocus = false; }
+        if(focus.has(doDates[i])) runFocus = true;
+        if(run > best && runFocus){ best = run; bestStart = start; bestEnd = doDates[i]; }
       }
       if(best > maxDo){
         issues.push({
@@ -2211,6 +2226,7 @@ function validate(data){
         const cur = all[i], nxt = all[i+1];
         const gap = daysBetween(cur.date, nxt.date);
         if(gap === null || gap < 1) continue;
+        if(!focused([cur.date, nxt.date])) continue;   /* the selected day */
         const endMin = hmToMin(cur.end);
         const nextMin = hmToMin(nxt.start);
         if(endMin === null || nextMin === null) continue;
@@ -2237,7 +2253,7 @@ function validate(data){
       windows.forEach(w => {
         /* the hours of the window that ends on each duty date */
         all.forEach(d => {
-          let sum = 0;
+          let sum = 0, winFocus = false;
           for(let i = all.length - 1; i >= 0; i--){
             const gap = daysBetween(all[i].date, d.date);
             if(gap === null) continue;
@@ -2245,8 +2261,9 @@ function validate(data){
             if(gap >= w.days) break;              /* outside the window */
             const h = dayHours(all[i]);
             sum += (h === null ? 0 : h);
+            if(focus.has(all[i].date)) winFocus = true;
           }
-          if(round2(sum) > w.max){
+          if(winFocus && round2(sum) > w.max){
             issues.push({ ok:false, who, text:who+": "+round2(sum)+"h in "+w.days+" days ending "+fmtDate(d.date)+" exceeds the "+w.max+"h limit for "+w.label+"." });
             return;
           }
