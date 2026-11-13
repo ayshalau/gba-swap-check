@@ -992,9 +992,9 @@ const DEFAULT_RULES = [
   { group:"2. Swap Limitations", id:"noAnnualLeaveSwap", on:true, label:"Annual Leave (AL) Cannot Be Swapped",
     value:1, unit:"", numeric:false,
     text:"<b>Annual Leave (AL)</b> is not a duty day, so it cannot be swapped — neither swapped out nor taken in place of a duty. An AL day ticked in a swap request is rejected: untick it and swap an actual duty day instead." },
-  { group:"2. Swap Limitations", id:"noNbNdaSwap", on:true, label:"NB / NDA / Duty A Cannot Be Swapped",
+  { group:"2. Swap Limitations", id:"noNbNdaSwap", on:true, label:"NB / NDA / A / GD Cannot Be Swapped",
     value:1, unit:"", numeric:false,
-    text:"<b>NB</b>, <b>NDA</b> and a duty <b>A</b> cannot be swapped. While the rule is on, such a day cannot be ticked: the tick is locked and the card says \"not swappable\". The check also rejects a request that carries one." },
+    text:"<b>NB</b> and <b>NDA</b> carry no duty, and the ground duties <b>A</b> and <b>GD</b> cannot be swapped either. None of them can be swapped. While the rule is on, such a day cannot be ticked: the tick is locked and the card says \"not swappable\". The check also rejects a request that carries one." },
 
   /* --- 3. DO and Standby Duty --- */
   { group:"3. Day Off (DO) and Standby Duty", id:"doMinHours", on:true, label:"Minimum DO Length",
@@ -1596,7 +1596,7 @@ function rosterCounts(crews){
    that says why the tick is locked:
      • AL  — annual leave, not a duty day
      • NB / NDA — carry no duty, the crew member is not rostered to work them
-     • A   — a ground duty that cannot be swapped */
+     • A / GD — ground duties that cannot be swapped */
 function unswapableCodes(code){
   const out = [];
   dutyCodes(code).forEach(c => {
@@ -1607,6 +1607,8 @@ function unswapableCodes(code){
       out.push({ code:s, label:(s === "NB" ? "NB" : "NDA") + " (no duty assignment)", note:"No duty assignment — not swappable" });
     } else if(s === "A" && ruleOn("noNbNdaSwap")){
       out.push({ code:s, label:"Duty A", note:"Duty A — not swappable" });
+    } else if(s === "GD" && ruleOn("noNbNdaSwap")){
+      out.push({ code:s, label:"Duty GD", note:"Duty GD — not swappable" });
     }
   });
   return out;

@@ -227,8 +227,8 @@ swap check. The tick is on by default, and the header of each crew member shows 
 are ticked with a button to **Select all** or **Clear** them. The selection is saved with the
 record and restored when it is loaded back into the form.
 
-Days that cannot be ticked — an annual leave, and the `NB` / `NDA` / `A` codes covered by the
-**NB / NDA / Duty A Cannot Be Swapped** rule — are left out of the count and out of the
+Days that cannot be ticked — an annual leave, and the `NB` / `NDA` / `A` / `GD` codes covered by the
+**NB / NDA / A / GD Cannot Be Swapped** rule — are left out of the count and out of the
 **Select all** / **Clear** button, so the button always says what it will do: *"23 of 23
 selected · 7 not swappable"* with **Clear** means the 23 swappable days are all ticked and the
 button unticks them.
@@ -245,7 +245,7 @@ it unticks the other side too. **Select all** also selects the same dates on the
 member, and the roster rows added with *Add to Swap Check* tick the matching dates on the other
 crew member. **Clear** works on that crew member alone — it never wipes the other crew member's
 request — so if one side is left empty the check says so ("Crew B swaps out no duty day"). A day
-that cannot be swapped — an annual leave, an NB / NDA / A — is never ticked this way; it stays
+that cannot be swapped - an annual leave, an NB / NDA / A / GD - is never ticked this way; it stays
 locked.
 
 The header of the panel shows the totals, for example *"2 crew member(s) · 60 duty day(s) ·
@@ -442,11 +442,12 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
   out nor taken in place of a duty. While the rule is on, an AL day cannot be ticked at all: the
   tick is locked and the card says "Annual leave — not swappable". The check also rejects a
   request that carries an AL day.
-- **NB / NDA / Duty A cannot be swapped** - one rule covers all three codes. `NB` and `NDA` carry no
-  duty, so there is nothing to swap, and a duty `A` is a ground duty that cannot be swapped
+- **NB / NDA / A / GD cannot be swapped** - one rule covers all four codes. `NB` and `NDA` carry no
+  duty, so there is nothing to swap, and the ground duties `A` and `GD` cannot be swapped
   either: they can neither be swapped out nor taken in place of a duty. While the rule is on, an
-  NB, NDA or A day cannot be ticked: the tick is locked and the card says "No duty assignment -
-  not swappable" (or "Duty A - not swappable"). The check also rejects a request that carries one.
+  NB, NDA, A or GD day cannot be ticked: the tick is locked and the card says "No duty
+  assignment - not swappable" (or "Duty A - not swappable" / "Duty GD - not swappable"). The
+  check also rejects a request that carries one.
 
 **3. Day Off (DO) and Standby Duty**
 - A single DO must include 2 local nights and be at least 34 hours. A local night is 8
