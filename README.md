@@ -521,8 +521,8 @@ rather than `file://`.
 
 ### On an iPhone
 
-- **Add to Home Screen** gives the standalone app with the GBA icon (`swap-icon.png`) and the
-  short name **Swap Check** under it.
+- **Add to Home Screen** gives the standalone app with the GBA tail-fin icon
+  (`apple-touch-icon.png`, built from `Logo.png`) and the short name **Swap Check** under it.
 - The text is never enlarged in landscape (`text-size-adjust`), so the layout holds when the
   phone is turned sideways.
 - Every field is 16px or larger, so focusing one never zooms the page.

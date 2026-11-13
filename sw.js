@@ -1,10 +1,13 @@
-const CACHE = "gba-swap-check-v99";
+const CACHE = "gba-swap-check-v100";
 const ASSETS = [
   "./",
   "index.html",
   "manifest.json",
   "Logo.png",
-  "swap-icon.png"
+  "icon-192.png",
+  "icon-512.png",
+  "icon-maskable-512.png",
+  "apple-touch-icon.png"
 ];
 
 self.addEventListener("install", (e) => {
