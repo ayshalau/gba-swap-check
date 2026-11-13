@@ -1,97 +1,76 @@
+# Builds the app icons from Logo.png: the GBA tail fin, drawn square on the
+# app's pale-teal wash. Run from anywhere - the files land beside the script.
+#
+#   icon-192.png          launcher and browser tab
+#   icon-512.png          install prompt and splash
+#   icon-maskable-512.png Android adaptive icon - the fin stays inside the 80%
+#                         safe circle, so no launcher shape ever clips it
+#   apple-touch-icon.png  iPhone and iPad home screen
+#
+# Every icon is opaque: iOS paints transparency black behind a home-screen icon.
+
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Drawing
 
-$size = 512
-$bmp = New-Object System.Drawing.Bitmap($size, $size)
-$g = [System.Drawing.Graphics]::FromImage($bmp)
-$g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-$g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-$g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
-$g.Clear([System.Drawing.Color]::Transparent)
+$here = $PSScriptRoot
+if (-not $here) { $here = Split-Path -Parent $MyInvocation.MyCommand.Path }
+$src = [System.Drawing.Bitmap]::FromFile((Join-Path $here "Logo.png"))
 
-# background rounded square with vertical teal gradient
-$bg = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
-    (New-Object System.Drawing.Rectangle(0, 0, $size, $size)),
-    [System.Drawing.Color]::FromArgb(255, 181, 230, 233),
-    [System.Drawing.Color]::FromArgb(255, 161, 227, 230),
-    90.0
-)
-$path = New-Object System.Drawing.Drawing2D.GraphicsPath
-$r = 96
-$path.AddArc(0, 0, $r, $r, 180, 90)
-$path.AddArc($size - $r, 0, $r, $r, 270, 90)
-$path.AddArc($size - $r, $size - $r, $r, $r, 0, 90)
-$path.AddArc(0, $size - $r, $r, $r, 90, 90)
-$path.CloseFigure()
-$g.FillPath($bg, $path)
+# The artwork keeps transparent padding in the file; it must not count towards
+# the centring, so the visible fin is measured first.
+$minX = $src.Width
+$minY = $src.Height
+$maxX = -1
+$maxY = -1
+for ($y = 0; $y -lt $src.Height; $y++) {
+    for ($x = 0; $x -lt $src.Width; $x++) {
+        if ($src.GetPixel($x, $y).A -gt 8) {
+            if ($x -lt $minX) { $minX = $x }
+            if ($x -gt $maxX) { $maxX = $x }
+            if ($y -lt $minY) { $minY = $y }
+            if ($y -gt $maxY) { $maxY = $y }
+        }
+    }
+}
+$cropW = $maxX - $minX + 1
+$cropH = $maxY - $minY + 1
 
-$ink = [System.Drawing.Color]::FromArgb(255, 10, 92, 99)
-$inkSoft = [System.Drawing.Color]::FromArgb(255, 15, 127, 136)
+function New-Icon([int]$size, [double]$ratio, [string]$name) {
+    $bmp = New-Object System.Drawing.Bitmap($size, $size)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+    $g.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
 
-# two swap arrows forming a circular exchange
-$pen = New-Object System.Drawing.Pen($ink, 34)
-$pen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-$pen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-$pen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
+    # soft brand wash: white at the top, the app's pale teal at the bottom
+    $rect = New-Object System.Drawing.Rectangle(0, 0, $size, $size)
+    $bg = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+        $rect,
+        [System.Drawing.Color]::FromArgb(255, 255, 255, 255),
+        [System.Drawing.Color]::FromArgb(255, 226, 245, 246),
+        90.0
+    )
+    $g.FillRectangle($bg, $rect)
 
-$cx = 256.0
-$cy = 240.0
-$rad = 118.0
+    # the fin is centred and scaled to the width the icon needs
+    $w = [int][math]::Round($size * $ratio)
+    $h = [int][math]::Round($w * ($cropH / $cropW))
+    $x = [int][math]::Round(($size - $w) / 2)
+    $y = [int][math]::Round(($size - $h) / 2)
+    $dst = New-Object System.Drawing.Rectangle($x, $y, $w, $h)
+    $g.DrawImage($src, $dst, $minX, $minY, $cropW, $cropH, [System.Drawing.GraphicsUnit]::Pixel)
 
-$g.DrawArc($pen, ($cx - $rad), ($cy - $rad), ($rad * 2), ($rad * 2), 200, 110)
-$g.DrawArc($pen, ($cx - $rad), ($cy - $rad), ($rad * 2), ($rad * 2), 20, 110)
-
-# arrow heads
-function Add-Triangle($gr, $pts, $color) {
-    $b = New-Object System.Drawing.SolidBrush -ArgumentList $color
-    $gr.FillPolygon($b, [System.Drawing.PointF[]]$pts)
-    $b.Dispose()
+    $g.Dispose()
+    $bmp.Save((Join-Path $here $name), [System.Drawing.Imaging.ImageFormat]::Png)
+    $bmp.Dispose()
+    $bg.Dispose()
+    Write-Output "Wrote $name ($size x $size)"
 }
 
-# upper arrow head (points right/down at end of first arc)
-Add-Triangle $g @(
-    (New-Object System.Drawing.PointF(374, 175)),
-    (New-Object System.Drawing.PointF(372, 262)),
-    (New-Object System.Drawing.PointF(300, 205))
-) $ink
+New-Icon 192 0.68 "icon-192.png"
+New-Icon 512 0.68 "icon-512.png"
+New-Icon 512 0.54 "icon-maskable-512.png"
+New-Icon 180 0.68 "apple-touch-icon.png"
 
-# lower arrow head (points left/up at end of second arc)
-Add-Triangle $g @(
-    (New-Object System.Drawing.PointF(138, 305)),
-    (New-Object System.Drawing.PointF(140, 218)),
-    (New-Object System.Drawing.PointF(212, 275))
-) $inkSoft
-
-# checklist badge bottom-right
-$bx = 356.0
-$by = 356.0
-$badge = New-Object System.Drawing.Drawing2D.GraphicsPath
-$br = 74
-$badge.AddArc($bx - $br, $by - $br, $br * 2, $br * 2, 0, 360)
-$fill = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 255, 255, 255))
-$g.FillPath($fill, $badge)
-$bp = New-Object System.Drawing.Pen($ink, 14)
-$g.DrawEllipse($bp, ($bx - $br), ($by - $br), ($br * 2), ($br * 2))
-
-$chk = New-Object System.Drawing.Pen($ink, 20)
-$chk.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-$chk.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-$g.DrawLines($chk, @(
-    (New-Object System.Drawing.PointF(322, 356)),
-    (New-Object System.Drawing.PointF(346, 380)),
-    (New-Object System.Drawing.PointF(392, 330))
-))
-
-$out = Join-Path $PSScriptRoot "swap-icon.png"
-$bmp.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)
-
-$pen.Dispose()
-$bp.Dispose()
-$chk.Dispose()
-$fill.Dispose()
-$bg.Dispose()
-$path.Dispose()
-$badge.Dispose()
-$g.Dispose()
-$bmp.Dispose()
-Write-Output "Wrote $out"
+$src.Dispose()

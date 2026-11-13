@@ -557,7 +557,9 @@ artwork's own transparent padding ignored so the fin is centred:
 | `apple-touch-icon.png` | 180x180 | iPhone and iPad home screen |
 
 All four are opaque (iOS paints transparency black) and are listed in `manifest.json` and in
-the service worker `ASSETS` list.
+the service worker `ASSETS` list. Run `make-icon.ps1` to rebuild them from `Logo.png`: it
+measures the visible fin, ignores the file's transparent padding, centres it and writes all
+four sizes.
 
 ### Updates and the offline cache
 
