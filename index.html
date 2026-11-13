@@ -3480,6 +3480,25 @@ async function exportRosterPdf(records, opts){
   const colW = cols.map(c => c.width * scale);
   const headH = 8;
 
+  /* ---- the tally of the roster, under the title ----
+     The same line the preview shows under the crew name field: the duty days,
+     then the days off by code, so the PDF and the app always agree. */
+  const tally = rosterTally(records);
+  const tallyParts = [tally.duty + " duty day(s)"];
+  if(tally.hasOff) tallyParts.push(tally.do + " DO", tally.dor + " DO-R", tally.al + " AL");
+  const tallyText = tallyParts.join(" · ");
+
+  const tallyH = 7.5;
+  doc.setFillColor(240, 248, 249);
+  doc.setDrawColor(190, 215, 217);
+  doc.setLineWidth(0.2);
+  doc.rect(margin, y, availW, tallyH, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(23, 58, 63);
+  doc.text(tallyText, margin + 2.5, y + tallyH/2 + 1.2);
+  y += tallyH + 4;
+
   /* Fit the whole roster on one A4 page when it stays legible: the row height
      shrinks to use the page, down to 4 mm. A longer roster still pages over. */
   const tableRows = records.length + (records.length ? 1 : 0);   /* + totals row */
@@ -3574,7 +3593,7 @@ async function exportRosterPdf(records, opts){
   const pages = doc.getNumberOfPages();
   for(let p = 1; p <= pages; p++){
     doc.setPage(p);
-    doc.text("GBA Swap Check - " + countRosterDutyDays(records) + " duty day(s)", margin, footY);
+    doc.text("GBA Swap Check · " + tallyText, margin, footY);
     doc.text("Page " + p + " of " + pages, pageW - margin, footY, { align:"right" });
   }
 
@@ -3772,6 +3791,20 @@ function countRosterDayOffs(records){
   return out;
 }
 
+/* The tally of a roster — the duty days, then the days off by code — is used
+   both under the crew name field and at the head of the exported PDF, so the
+   two can never disagree. */
+function rosterTally(records){
+  const off = countRosterDayOffs(records);
+  return {
+    duty: countRosterDutyDays(records),
+    do: off.do,
+    dor: off.dor,
+    al: off.al,
+    hasOff: off.do + off.dor + off.al > 0
+  };
+}
+
 function renderRosterPreview(records){
   const t = document.getElementById("roster-preview");
   if(!records.length){
@@ -3808,12 +3841,12 @@ function renderRosterPreview(records){
   t.innerHTML = head + body + foot;
   /* the tally sits under the crew name field: the duty days, then the days
      off by code */
-  const off = countRosterDayOffs(records);
-  const offText = (off.do + off.dor + off.al)
-    ? " · <b>" + off.do + "</b> DO · <b>" + off.dor + "</b> DO-R · <b>" + off.al + "</b> AL"
+  const tally = rosterTally(records);
+  const offText = tally.hasOff
+    ? " · <b>" + tally.do + "</b> DO · <b>" + tally.dor + "</b> DO-R · <b>" + tally.al + "</b> AL"
     : "";
   document.getElementById("roster-pdf-count").innerHTML =
-    "<b>" + countRosterDutyDays(records) + "</b> duty day(s)" + offText;
+    "<b>" + tally.duty + "</b> duty day(s)" + offText;
 }
 
 function refreshRosterPdfPanel(){

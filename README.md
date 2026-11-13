@@ -339,8 +339,11 @@ jsPDF:
 - **Total Block Hours** is shown in the last row of both the preview and the exported PDF:
   the Block Hour column is added up and printed in its own column. Non-flight duties have
   no block, so they do not change the total.
-- The **duty day count** (beside the panel title and in the PDF footer) leaves out `DO` and
-  `AL`, and counts several flights on the same date as one duty day.
+- The **duty day count** and the **days off by code** (`DO`, `DO-R`, `AL`) are printed together
+  as a tally under the crew name field and at the head of the exported PDF — for example
+  *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL"*. The duty day count leaves out days off and counts
+  several flights on the same date as one duty day. The same tally is repeated in the footer of
+  every PDF page.
 - When a duty day has more than one flight, the date is printed on the first row only and
   the next rows of the same date leave it blank, as the roster sheet does.
 - **Export Roster as PDF** opens the file in a new page (a download if the popup is
