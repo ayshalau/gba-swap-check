@@ -1383,6 +1383,32 @@ function updatePartyTotal(crewEl){
   sub.hidden = !differs;
 }
 
+/* A swap is only allowed on the same date, so the two sides of the request
+   always carry the same days. Ticking a duty day ticks the same date on the
+   other crew member as well, and clearing it clears the other side too.
+   changes: [{ date:"2026-11-03", on:true }, ...] */
+function syncSameDateTicks(changes){
+  const list = (changes || []).filter(c => c && c.date);
+  if(!list.length) return;
+  const parties = [...document.querySelectorAll("#parties .party")];
+  const touched = [];
+  parties.forEach(party => {
+    let changed = false;
+    party.querySelectorAll(".duty-day").forEach(d => {
+      const box = d.querySelector(".d-check");
+      if(!box || box.disabled) return;          /* a locked day is never ticked */
+      const date = d.querySelector(".d-date").value;
+      const hit = list.find(c => c.date === date);
+      if(!hit || box.checked === hit.on) return;
+      box.checked = hit.on;
+      d.dataset.selected = hit.on ? "1" : "0";
+      changed = true;
+    });
+    if(changed) touched.push(party);
+  });
+  touched.forEach(p => updateSelCount(p));
+}
+
 /* A summary of the request: how many crew members, how many duty days, and
    how many of those days are ticked for the check. */
 function rosterCounts(crews){
@@ -1472,6 +1498,12 @@ function addDutyDay(crewEl, data){
   /* the tick decides whether this duty day is checked */
   el.querySelector(".d-check").addEventListener("change", ev => {
     el.dataset.selected = ev.target.checked ? "1" : "0";
+    /* a swap is only allowed on the same date, so the same date on the other
+       crew member is ticked (or cleared) as well */
+    syncSameDateTicks([{
+      date: el.querySelector(".d-date").value,
+      on: ev.target.checked
+    }]);
     updateSelCount(el.closest(".party"));
     updateSummary();
   });
@@ -1580,6 +1612,11 @@ function addCrew(data){
       b.checked = anyOff;
       b.closest(".duty-day").dataset.selected = anyOff ? "1" : "0";
     });
+    /* the other crew member follows on the same dates */
+    syncSameDateTicks(free.map(b => ({
+      date: b.closest(".duty-day").querySelector(".d-date").value,
+      on: anyOff
+    })));
     updateSelCount(el);
     updateSummary();
   });
@@ -4165,12 +4202,17 @@ function addRowsToCrew(crewIndex, crewLabel){
   /* The duty days of a swap request are days, not sectors: several flights on
      the same date are one duty day, so they share one card. */
   let added = 0;
+  const addedDates = [];
   groupRowsByDay(ocrRows).forEach(day => {
     const duty = combineDay(day);
     if(!duty.date && !duty.start && !duty.end) return;
     addDutyDay(crewEl, duty);
     added++;
+    if(duty.date) addedDates.push({ date: duty.date, on: true });
   });
+
+  /* the other crew member keeps the same dates */
+  syncSameDateTicks(addedDates);
 
   updateSummary();
   updateSelCount(crewEl);
