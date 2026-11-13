@@ -427,9 +427,11 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 - A single DO must include 2 local nights and be at least 34 hours. A local night is 8
   hours falling between 2200 and 0800 local time. An additional consecutive DO must be at
   least 24 hours.
-- The maximum number of consecutive DO allowed is **4**. A day off requested (`DO-R`) counts as a
-  DO here, so a run of days off is measured across `DO` and `DO-R` alike. An annual leave
-  (`AL`) is **not** counted as a DO in this rule.
+- The maximum number of consecutive DO allowed is **4**. The days off counted are the ones the
+  crew member holds **after the swap** — the days off that are not swapped away, plus the days
+  off taken in from the other crew member. A day off requested (`DO-R`) counts as a DO here, so a
+  run of days off is measured across `DO` and `DO-R` alike. An annual leave (`AL`) is **not**
+  counted as a DO in this rule.
 - A DO cannot be followed by duty earlier than 0600.
 - Duty end time is 30 minutes after STA / ATA or end of standby duty period.
 - Any swap resulting in a duty end beyond 2330L before a DO is not approved.
