@@ -1248,6 +1248,24 @@ function isDayOffCode(code){
   return s === "DO" || s === "AL" || s === "DO-R" || s === "DOR";
 }
 
+/* The duty cards of a crew member are listed from the oldest date. A card that
+   has no date yet is left at the end of the list. */
+function sortDutyDays(crewEl){
+  const box = crewEl && crewEl.querySelector(".duties");
+  if(!box) return;
+  const cards = [...box.querySelectorAll(".duty-day")];
+  const dateOf = el => (el.querySelector(".d-date") || {}).value || "";
+  const sorted = cards.slice().sort((a,b) => {
+    const da = dateOf(a), db = dateOf(b);
+    if(!da && !db) return 0;
+    if(!da) return 1;                      /* no date at the end */
+    if(!db) return -1;
+    return da < db ? -1 : (da > db ? 1 : 0);
+  });
+  if(sorted.every((el,i) => el === cards[i])) return;   /* already in order */
+  sorted.forEach(el => box.appendChild(el));
+}
+
 /* A duty day that is a DO for the consecutive-days-off rule: a day off, and a
    day off requested (DO-R). An annual leave is not a DO, so it is left out. */
 function isDoDay(d){
@@ -1579,6 +1597,7 @@ function addDutyDay(crewEl, data){
     refreshSwapLocks();
     updateSelCount(party);
     updateSummary();
+    sortDutyDays(party);
   });
   /* the tick decides whether this duty day is checked */
   el.querySelector(".d-check").addEventListener("change", ev => {
@@ -1616,6 +1635,10 @@ function addDutyDay(crewEl, data){
     updateDutyDateLabel(el);
     /* the date decides which day the other crew member is paired with */
     refreshSwapLocks();
+    /* and where the card sits in the list - the card moves, so the focus is
+       put back on the date field the user just used */
+    sortDutyDays(el.closest(".party"));
+    try{ el.querySelector(".d-date").focus({ preventScroll:true }); }catch(e){}
   });
   /* clicking the day number opens the date picker */
   el.querySelector(".duty-date").addEventListener("click", () => {
@@ -1630,6 +1653,8 @@ function addDutyDay(crewEl, data){
   updateDutyDateLabel(el);
   syncDutyFields(el);
   syncDutyType(el);
+  /* the cards are listed from the oldest date */
+  sortDutyDays(crewEl);
   /* the new card can lock the same date on the other crew member */
   refreshSwapLocks();
   return el;
