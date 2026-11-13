@@ -273,9 +273,14 @@ Import, where it is still shown in the preview and the exported PDF.
 A slot only counts as a crew member once it is named or has at least one dated duty day, so
 an empty slot does not satisfy the "at least two crew members" rule.
 
-The **Preceding Duty Days** section has been removed, so the rest-period and rolling hour-limit
-rules are assessed on the duty days in the request alone — the app no longer takes the days
-worked before the request. The rules themselves are unchanged and still listed in the Rules tab.
+The **Preceding Duty Days** section has been removed, but the whole roster that is uploaded for
+each crew member is taken into account: the rules that judge a working pattern — the rest
+period, the hours in 7, 14 and 28 days, the days on duty, the days off, the day-off and
+standby rules — are measured on the crew member's **whole roster with the swap applied**. The
+days that are not swapped away stay as they are, and the days that are swapped away come back
+as the other crew member's duty. So ticking a duty for the swap also brings the rest of the
+uploaded roster into the check: a roster that breaks a rule is reported, and swapping the
+offending day can fix it. The rules themselves are unchanged and still listed in the Rules tab.
 
 The request details - Requester Name, Position, Base and Reason - are no longer asked for.
 The requester is taken from the first crew member listed, and the Rule "Reason Mandatory"

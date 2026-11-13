@@ -1258,36 +1258,41 @@ function isDoDay(d){
   return s === "DO" || s === "DO-R" || s === "DOR";
 }
 
-/* The days off a crew member holds after the swap:
-     - a day off on the form that is not swapped away stays a day off
-     - a day that is swapped away comes back as the other crew member's duty,
-       so it is a day off only when the duty taken in is a day off
-   The result is the roster of days off the crew member flies after the swap. */
-function postSwapOffDates(crew, otherCrews){
-  const mine = new Map();
-  (crew.allDuties || []).forEach(d => { if(d.date) mine.set(d.date, d); });
+/* The roster a crew member flies after the swap: every duty day on the form,
+   with the days that are swapped away replaced by the duty taken in from the
+   other crew member, and the days the other crew member swaps in added.
+   The rules that judge a working pattern - the rest period, the hours in 7, 14
+   and 28 days, the days on duty, the days off - are measured on this roster,
+   so the whole uploaded roster is taken into account and not only the ticked
+   days of the request. */
+function postSwapRoster(crew, otherCrews){
+  const mine = (crew.allDuties || []).filter(d => d.date);
   /* the duty the other crew member gives up on each date */
   const takenIn = new Map();
   (otherCrews || []).forEach(c => (c.duties || []).forEach(d => {
     if(d.date && !takenIn.has(d.date)) takenIn.set(d.date, d);
   }));
 
-  const off = new Set();
-  mine.forEach((d, date) => {
+  const out = [];
+  const held = new Set();
+  mine.forEach(d => {
+    held.add(d.date);
     if(d.selected === false){
-      /* the day stays with this crew member */
-      if(isDoDay(d)) off.add(date);
+      out.push(d);                       /* the day stays with this crew member */
       return;
     }
-    /* the day is given away: what comes back is the other crew member's duty */
-    const other = takenIn.get(date);
-    if(other && isDoDay(other)) off.add(date);
+    /* the day is swapped away: what comes back is the other crew member's duty */
+    const other = takenIn.get(d.date);
+    if(other) out.push(Object.assign({}, other, { date:d.date, selected:true }));
+    /* nothing comes back for that date: the day is no longer a duty */
   });
   /* a day the other crew member swaps in that this crew member does not hold */
   takenIn.forEach((d, date) => {
-    if(!mine.has(date) && isDoDay(d)) off.add(date);
+    if(!held.has(date)) out.push(Object.assign({}, d, { date:date, selected:true }));
   });
-  return [...off].sort();
+
+  out.sort((a,b) => (a.date||"").localeCompare(b.date||""));
+  return out;
 }
 
 function dutyTypeFromCode(code){
@@ -1791,8 +1796,8 @@ function dayHours(d){
        it, so a form that is only partly filled is never judged on it, and
      • an annual leave counts as a day off, like a DO.
    ============================================================ */
-function checkDaysOffEntitlement(crew, who, issues){
-  const days = (crew.allDuties||[]).filter(d => d.date);
+function checkDaysOffEntitlement(roster, who, issues){
+  const days = (roster||[]).filter(d => d.date);
   if(!days.length) return;
 
   /* one entry per calendar date: a day is off when it is a DO or a leave */
@@ -1978,6 +1983,13 @@ function validate(data){
     const who = crew.name || ("Crew member #"+(ci+1));
     const duties = (crew.duties||[]).filter(d => d.date);
     const history = (crew.history||[]).filter(h => h.date);
+    /* The whole uploaded roster of this crew member with the swap applied:
+       the days that are not swapped away stay, the days that are swapped away
+       come back as the other crew member's duty. The rules that judge a
+       working pattern are measured on it, so the whole roster counts and not
+       only the ticked days of the request. */
+    const others = crews.filter(c => c !== crew);
+    const roster = postSwapRoster(crew, others);
 
     /* Rule 1 — number of duty days, consecutive or individual */
     if(duties.length){
@@ -2018,7 +2030,7 @@ function validate(data){
     }
 
     /* Rule 3 — DO rules */
-    const doDays = duties.filter(d => d.type === "DO");
+    const doDays = roster.filter(d => d.type === "DO");
     if(doDays.length){
       const minDoH = ruleOn("doMinHours") ? ruleNum("doMinHours", 34) : 0;
       const minNights = ruleOn("doMinNights") ? ruleNum("doMinNights", 2) : 0;
@@ -2038,7 +2050,7 @@ function validate(data){
     /* Rule 3 — duty end buffer before a DO (latest end before DO) */
     if(ruleOn("latestEndBeforeDo")){
       const latest = ruleTime("latestEndBeforeDo", 1410); /* 23:30 */
-      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      const sorted = [...roster].sort((a,b) => (a.date||"").localeCompare(b.date||""));
       for(let i = 0; i < sorted.length - 1; i++){
         const cur = sorted[i], nxt = sorted[i+1];
         if(cur.type === "DO" || nxt.type !== "DO") continue;
@@ -2056,7 +2068,7 @@ function validate(data){
     /* Rule 3 — DO cannot be followed by duty earlier than 0600 */
     if(ruleOn("doEarliestStart")){
       const earliest = ruleTime("doEarliestStart", 360); /* 06:00 */
-      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      const sorted = [...roster].sort((a,b) => (a.date||"").localeCompare(b.date||""));
       for(let i = 0; i < sorted.length - 1; i++){
         const cur = sorted[i], nxt = sorted[i+1];
         if(cur.type !== "DO" || nxt.type === "DO") continue;
@@ -2073,7 +2085,7 @@ function validate(data){
     /* Rule 3 — max consecutive days on duty */
     if(ruleOn("maxConsecDutyDays")){
       const maxD = ruleNum("maxConsecDutyDays", 6);
-      const allDays = duties.concat(history).filter(d => d.date && d.type !== "DO");
+      const allDays = roster.filter(d => d.date && d.type !== "DO");
       const dates = [...new Set(allDays.map(d => d.date))].sort();
       let run = 0, best = 0;
       for(let i = 0; i < dates.length; i++){
@@ -2089,7 +2101,7 @@ function validate(data){
     /* Rule 3 — 6th consecutive duty day ends by 2100L */
     if(ruleOn("sixthDayEnd")){
       const limit = ruleTime("sixthDayEnd", 1260); /* 21:00 */
-      const allDays = duties.concat(history).filter(d => d.date && d.type !== "DO");
+      const allDays = roster.filter(d => d.date && d.type !== "DO");
       const dates = [...new Set(allDays.map(d => d.date))].sort();
       let run = 0;
       for(let i = 0; i < dates.length; i++){
@@ -2108,7 +2120,7 @@ function validate(data){
     /* Rule 3 — standby starting 1100L+ cannot be followed by DO */
     if(ruleOn("standbyNoDoAfter")){
       const from = ruleTime("standbyNoDoAfter", 660); /* 11:00 */
-      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      const sorted = [...roster].sort((a,b) => (a.date||"").localeCompare(b.date||""));
       for(let i = 0; i < sorted.length - 1; i++){
         const cur = sorted[i], nxt = sorted[i+1];
         if(cur.type !== "Standby" || nxt.type !== "DO") continue;
@@ -2122,12 +2134,14 @@ function validate(data){
 
     /* Rule 3 — duty after standby check-in restrictions
        Standby starting at 1100L  -> next duty check-in no earlier than 1200L
-       Standby starting 1200L or later -> next duty check-in no earlier than 1500L */
+       Standby starting 1200L or later -> next duty check-in no earlier than 1500L
+       A standby that starts before 1100L is not covered by these two rules. */
     if(ruleOn("standby1100NextMinCheckin") && ruleOn("standby1200NextMinCheckin")){
       const min1100 = ruleTime("standby1100NextMinCheckin", 720); /* 12:00 */
       const min1200 = ruleTime("standby1200NextMinCheckin", 900); /* 15:00 */
+      const from1100 = 11*60; /* 1100L */
       const from1200 = 12*60; /* 1200L */
-      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      const sorted = [...roster].sort((a,b) => (a.date||"").localeCompare(b.date||""));
       for(let i = 0; i < sorted.length - 1; i++){
         const cur = sorted[i], nxt = sorted[i+1];
         if(cur.type !== "Standby" || nxt.type === "DO") continue;
@@ -2135,6 +2149,7 @@ function validate(data){
         const s = hmToMin(cur.start);
         const ns = hmToMin(nxt.start);
         if(s === null || ns === null) continue;
+        if(s < from1100) continue;              /* the rule starts at 1100L */
         const limit = (s >= from1200) ? min1200 : min1100;
         if(ns < limit){
           issues.push({ ok:false, who, text:who+": duty on "+fmtDate(nxt.date)+" starts at "+minToHm(ns)+"L but standby on "+fmtDate(cur.date)+" starting "+minToHm(s)+"L requires a check-in no earlier than "+minToHm(limit)+"L." });
@@ -2145,7 +2160,7 @@ function validate(data){
     /* Rule 3 — D2/D3 after standby H10 restricted */
     if(ruleOn("standbyH10RestrictDays")){
       const span = ruleNum("standbyH10RestrictDays", 2);
-      const sorted = [...duties].sort((a,b) => (a.date||"").localeCompare(b.date||""));
+      const sorted = [...roster].sort((a,b) => (a.date||"").localeCompare(b.date||""));
       for(let i = 0; i < sorted.length; i++){
         const sb = sorted[i];
         if(sb.type !== "Standby") continue;
@@ -2164,11 +2179,8 @@ function validate(data){
     /* Rule 3 — the maximum number of consecutive days off */
     if(ruleOn("maxConsecDo")){
       const maxDo = ruleNum("maxConsecDo", 4);
-      /* the days off the crew member holds after the swap - the days off that
-         are not swapped away, plus the days off taken in from the other crew
-         member */
-      const others = crews.filter(c => c !== crew);
-      const doDates = postSwapOffDates(crew, others);
+      /* the days off the crew member holds after the swap */
+      const doDates = roster.filter(isDoDay).map(d => d.date).sort();
       let run = 0, best = 0, bestStart = "", bestEnd = "";
       let start = "";
       for(let i = 0; i < doDates.length; i++){
@@ -2185,15 +2197,15 @@ function validate(data){
       }
     }
 
-    /* Rule 6 — days off entitlement */
-    checkDaysOffEntitlement(crew, who, issues);
+    /* Rule 6 — days off entitlement, measured on the roster after the swap */
+    checkDaysOffEntitlement(roster, who, issues);
 
     /* Rule 4 — rest period */
     if(ruleOn("restFixed") || ruleOn("restMatchDuty")){
       const restBuf = ruleOn("restBuffer") ? ruleNum("restBuffer", 30) : 0;
       const fixed = ruleOn("restFixed") ? ruleNum("restFixed", 12) : 0;
       const matchDuty = ruleOn("restMatchDuty");
-      const all = duties.concat(history).filter(d => d.date && d.type !== "DO")
+      const all = roster.filter(d => d.date && d.type !== "DO")
         .sort((a,b) => (a.date||"").localeCompare(b.date||""));
       for(let i = 0; i < all.length - 1; i++){
         const cur = all[i], nxt = all[i+1];
@@ -2221,18 +2233,18 @@ function validate(data){
       if(ruleOn("maxHours14")) windows.push({ days:14, max:ruleNum("maxHours14", 105), label:"14 consecutive days" });
       if(ruleOn("maxHours28")) windows.push({ days:28, max:ruleNum("maxHours28", 210), label:"28 consecutive days" });
 
-      const all = duties.concat(history).filter(d => d.date && d.type !== "DO");
+      const all = roster.filter(d => d.date && d.type !== "DO");
       windows.forEach(w => {
-        /* sum hours for each contiguous window ending on each duty date */
+        /* the hours of the window that ends on each duty date */
         all.forEach(d => {
           let sum = 0;
-          const win = [];
           for(let i = all.length - 1; i >= 0; i--){
             const gap = daysBetween(all[i].date, d.date);
-            if(gap === null || gap < 0 || gap >= w.days) break;
+            if(gap === null) continue;
+            if(gap < 0) continue;                 /* a day after this one */
+            if(gap >= w.days) break;              /* outside the window */
             const h = dayHours(all[i]);
             sum += (h === null ? 0 : h);
-            win.push(all[i]);
           }
           if(round2(sum) > w.max){
             issues.push({ ok:false, who, text:who+": "+round2(sum)+"h in "+w.days+" days ending "+fmtDate(d.date)+" exceeds the "+w.max+"h limit for "+w.label+"." });
