@@ -227,10 +227,12 @@ the 23 swappable days are all ticked and the button unticks them.
 
 Because a swap is only allowed on the same date, **the two sides of the request follow each
 other**: ticking a duty day ticks the same date on the other crew member as well, and unticking
-it unticks the other side too. **Select all** and **Clear** do the same for every date they
-touch, and the roster rows added with *Add to Swap Check* tick the matching dates on the other
-crew member. A day that cannot be swapped — an annual leave, an NB / NDA — is never ticked this
-way; it stays locked.
+it unticks the other side too. **Select all** also selects the same dates on the other crew
+member, and the roster rows added with *Add to Swap Check* tick the matching dates on the other
+crew member. **Clear** works on that crew member alone — it never wipes the other crew member's
+request — so if one side is left empty the check says so ("Crew B swaps out no duty day"). A day
+that cannot be swapped — an annual leave, an NB / NDA — is never ticked this way; it stays
+locked.
 
 The header of the panel shows the totals, for example *"2 crew member(s) · 60 duty day(s) ·
 32 selected"*, and the verdict repeats how many days were checked.

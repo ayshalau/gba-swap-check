@@ -1612,11 +1612,15 @@ function addCrew(data){
       b.checked = anyOff;
       b.closest(".duty-day").dataset.selected = anyOff ? "1" : "0";
     });
-    /* the other crew member follows on the same dates */
-    syncSameDateTicks(free.map(b => ({
-      date: b.closest(".duty-day").querySelector(".d-date").value,
-      on: anyOff
-    })));
+    /* Selecting all also selects the same dates on the other crew member.
+       Clearing stays on this crew alone — it must not wipe the other crew
+       member's request as well. */
+    if(anyOff){
+      syncSameDateTicks(free.map(b => ({
+        date: b.closest(".duty-day").querySelector(".d-date").value,
+        on: true
+      })));
+    }
     updateSelCount(el);
     updateSummary();
   });
@@ -1868,7 +1872,7 @@ function validate(data){
     const fmtList = ds => ds.length ? ds.map(rosterDate).join(", ") : "no duty day";
     for(let i = 1; i < crews.length; i++){
       const a = lists[0], b = lists[i];
-      if(!a.length || !b.length) continue;   /* nothing to pair up yet */
+      if(!a.length && !b.length) continue;   /* neither side has a duty day */
       const onlyA = a.filter(d => b.indexOf(d) === -1);
       const onlyB = b.filter(d => a.indexOf(d) === -1);
       if(!onlyA.length && !onlyB.length) continue;
