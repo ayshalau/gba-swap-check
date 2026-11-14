@@ -1048,9 +1048,9 @@ const DEFAULT_RULES = [
   { group:"3. Day Off (DO) and Standby Duty", id:"maxConsecDo", on:true, label:"Maximum Number of Consecutive Days Off (DO)",
     value:4, unit:"days", numeric:true,
     text:"The maximum number of consecutive DO allowed is <b>4</b>. The days off counted are the ones the crew member holds <b>after the swap</b> - the days off that are not swapped away, plus the days off taken in from the other crew member. A day off requested (<b>DO-R</b>) counts as a DO; an annual leave (<b>AL</b>) and a sick leave (<b>SL</b>) do not." },
-  { group:"3. Day Off (DO) and Standby Duty", id:"doEarliestStart", on:true, label:"Earliest Duty Start After DO",
+  { group:"3. Day Off (DO) and Standby Duty", id:"doEarliestStart", on:true, label:"Earliest Duty Start After DO / DO-R / AL",
     value:"06:00", unit:"", numeric:false, time:true,
-    text:"A DO cannot be followed by duty earlier than <b>0600</b>." },
+    text:"A day off cannot be followed by duty earlier than <b>0600</b>. This applies to every kind of rest day: a <b>DO</b>, a day off requested (<b>DO-R</b>), an annual leave (<b>AL</b>) and a sick leave (<b>SL</b>). A duty that starts too early on the day after one of them is rejected." },
   { group:"3. Day Off (DO) and Standby Duty", id:"dutyEndBuffer", on:true, label:"Duty End Buffer After STA / ATA",
     value:30, unit:"mins", numeric:true,
     text:"Duty end time is <b>30 minutes after STA / ATA</b> or end of Standby duty period." },
@@ -2412,7 +2412,8 @@ function validate(data){
       }
     }
 
-    /* Rule 3 — DO cannot be followed by duty earlier than 0600 */
+    /* Rule 3 — a day off (DO, DO-R, AL, SL) cannot be followed by duty earlier
+       than 0600 */
     if(ruleOn("doEarliestStart")){
       const earliest = ruleTime("doEarliestStart", 360); /* 06:00 */
       const sorted = [...roster].sort((a,b) => (a.date||"").localeCompare(b.date||""));
@@ -2425,7 +2426,10 @@ function validate(data){
         const s = hmToMin(nxt.start);
         if(s === null) continue;
         if(s < earliest){
-          issues.push({ ok:false, who, text:who+": duty on "+fmtDate(nxt.date)+" starts at "+minToHm(s)+"L, earlier than the "+minToHm(earliest)+"L minimum after a DO." });
+          /* the finding says which rest day it is about */
+          const code = String(cur.flight || "").trim().toUpperCase();
+          const what = code === "AL" ? "an AL" : (code === "SL" ? "an SL" : (code ? "a " + code : "a DO"));
+          issues.push({ ok:false, who, text:who+": duty on "+fmtDate(nxt.date)+" starts at "+minToHm(s)+"L, earlier than the "+minToHm(earliest)+"L minimum after "+what+"." });
         }
       }
     }
