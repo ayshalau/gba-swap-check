@@ -1030,6 +1030,9 @@ const DEFAULT_RULES = [
   { group:"2. Swap Limitations", id:"noSickLeaveSwap", on:true, label:"Sick Leave (SL) Cannot Be Swapped",
     value:1, unit:"", numeric:false,
     text:"<b>Sick Leave (SL)</b> is a day off, not a duty day, so it cannot be swapped - neither swapped out nor taken in place of a duty. An SL day ticked in a swap request is rejected: untick it and swap an actual duty day instead." },
+  { group:"2. Swap Limitations", id:"layoverSwapTogether", on:true, label:"A Layover Is Swapped With the Flight Home",
+    value:1, unit:"", numeric:false,
+    text:"A duty that ends at an outport leaves the crew member there, so it has to be swapped <b>together with the flight that brings them home</b> from that station. Ticking the outport duty ticks the flight home as well, and a request that carries one of the two without the other is rejected. A same-day turnaround (HKG TPE and back) is not a layover." },
   { group:"2. Swap Limitations", id:"noNbNdaSwap", on:true, label:"NB / NDA / A / GD Cannot Be Swapped",
     value:1, unit:"", numeric:false,
     text:"<b>NB</b> and <b>NDA</b> carry no duty, and the ground duties <b>A</b> and <b>GD</b> cannot be swapped either. None of them can be swapped. While the rule is on, such a day cannot be ticked: the tick is locked and the card says \"not swappable\". The check also rejects a request that carries one." },
@@ -1848,6 +1851,67 @@ function restDayCode(d){
   return "";
 }
 
+/* The station the crew returns to - the home base. A duty that ends at any
+   other station leaves the crew member there, and the flight that brings them
+   home has to be swapped with it. */
+const HOME_BASE = "HKG";
+
+/* The first and the last airport of a duty day: the sector reads "HKG CTS"
+   or "HKG CTS → CTS HKG". */
+function dutyAirports(d){
+  const parts = String((d && d.sector) || "").toUpperCase().split(/[^A-Z]+/).filter(Boolean);
+  if(!parts.length) return { from:"", to:"" };
+  return { from: parts[0], to: parts[parts.length - 1] };
+}
+
+/* The layover pairs of a crew member: a duty that ends at an outport and the
+   flight that brings the crew member home from there. The two are one: they
+   have to be swapped together, or the crew member would be left at the
+   outport. A same-day turnaround (HKG TPE and back) is not a layover, and
+   neither is a flight that goes on somewhere else. */
+function layoverPairs(duties){
+  const days = (duties || []).filter(d => d.date).slice().sort((a,b) => (a.date||"").localeCompare(b.date||""));
+  const pairs = [];
+  for(let i = 0; i < days.length; i++){
+    const cur = days[i];
+    const a = dutyAirports(cur);
+    if(!a.to || a.to === HOME_BASE) continue;          /* the duty ends at home */
+    /* the next flight out of that station, on a later day */
+    for(let j = i + 1; j < days.length; j++){
+      const nxt = days[j];
+      if(nxt.date === cur.date) continue;               /* the same day: a turnaround */
+      const b = dutyAirports(nxt);
+      if(!b.from) continue;                             /* no sector: a ground duty */
+      if(b.from !== a.to) break;                        /* the crew left that station */
+      if(b.to === HOME_BASE) pairs.push({ outport:a.to, first:cur, second:nxt });
+      break;
+    }
+  }
+  return pairs;
+}
+
+/* The duty days of a crew member, as the cards on the form. */
+function crewDutyList(crewEl){
+  return [...(crewEl ? crewEl.querySelectorAll(".duty-day") : [])].map(el => ({
+    el: el,
+    date: (el.querySelector(".d-date") || {}).value || "",
+    sector: (el.querySelector(".d-sector") || {}).value || "",
+    flight: (el.querySelector(".d-flight") || {}).value || "",
+    selected: el.dataset.selected !== "0"
+  }));
+}
+
+/* The duty day that has to be swapped with the given one, when it is a
+   layover: the flight that brings the crew member home. */
+function layoverPartner(duties, date){
+  const pairs = layoverPairs(duties);
+  for(const p of pairs){
+    if(p.first.date === date) return p.second;
+    if(p.second.date === date) return p.first;
+  }
+  return null;
+}
+
 function addDutyDay(crewEl, data){
   const d = data || {};
   const el = document.createElement("div");
@@ -1893,12 +1957,22 @@ function addDutyDay(crewEl, data){
     setTimeout(() => {
       const on = box.checked;
       el.dataset.selected = on ? "1" : "0";
+      const date = el.querySelector(".d-date").value;
+      const changes = [{ date: date, on: on }];
+      /* A duty that ends at an outport is swapped together with the flight
+         that brings the crew member home, on both crew members. */
+      document.querySelectorAll("#parties .party").forEach(p => {
+        const partner = layoverPartner(crewDutyList(p), date);
+        if(!partner || !partner.el) return;
+        const pBox = partner.el.querySelector(".d-check");
+        if(!pBox || pBox.disabled) return;
+        pBox.checked = on;
+        partner.el.dataset.selected = on ? "1" : "0";
+        if(!changes.some(c => c.date === partner.date)) changes.push({ date: partner.date, on: on });
+      });
       /* a swap is only allowed on the same date, so the same date on the other
          crew member is ticked (or cleared) as well */
-      const res = syncSameDateTicks([{
-        date: el.querySelector(".d-date").value,
-        on: on
-      }], party);
+      const res = syncSameDateTicks(changes, party);
       updateSelCount(party);
       /* the other crew member takes in these block hours, so its figure moves too */
       updatePartyTotals();
@@ -2393,6 +2467,23 @@ function validate(data){
       duties.forEach(d => {
         unswapableCodes(d.flight).forEach(hit => {
           issues.push({ ok:false, who, text:who+": "+fmtDate(d.date)+" is "+hit.label+", which cannot be swapped." });
+        });
+      });
+    }
+
+    /* Rule 2 — a layover is swapped together: a duty that ends at an outport
+       has to travel with the flight that brings the crew member home. */
+    if(ruleOn("layoverSwapTogether")){
+      layoverPairs(crew.allDuties || duties).forEach(p => {
+        const a = p.first.selected !== false;
+        const b = p.second.selected !== false;
+        if(a === b) return;                       /* both or neither */
+        const home = p.second;
+        issues.push({
+          ok:false, who,
+          text:who+": the duty on "+fmtDate(p.first.date)+" ends at "+p.outport+
+               ", so it has to be swapped together with the flight home on "+fmtDate(home.date)+
+               ". Tick both days or neither."
         });
       });
     }

@@ -12,7 +12,7 @@ request from it.
 
 - **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
 - **Roster Import** — upload a roster PDF and read it in the browser. Duty days are extracted as editable rows, then added to a swap request in one click. The file is never uploaded to a server.
-- **Rules** - all 34 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
+- **Rules** - all 35 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
 - **Records** - every check is saved with its result and findings; filter by result, search, load back into the form, delete, or export to CSV.
 
 ## Roster import
@@ -299,6 +299,19 @@ that cannot be swapped - an annual leave, a sick leave, an NB / NDA / A / GD - i
 this way; it stays
 locked.
 
+**A layover is swapped together.** A duty that ends at an outport leaves the crew member
+there, so it has to travel with **the flight that brings them home** from that station. The app
+works the pair out from the sector: the duty that ends at an outport, and the next flight out
+of that station that ends at `HKG`. Ticking one of the two ticks the other, on both crew
+members, and unticking one unticks the other — so they are always swapped as one. A request
+that carries one of the two without the other is rejected:
+
+> *"Wong Ka Ming: the duty on 2026-11-18 ends at CTS, so it has to be swapped together with the
+> flight home on 2026-11-19. Tick both days or neither."*
+
+A same-day turnaround — `HB 702 HKG TPE` and `HB 703 TPE HKG` on the same day — is not a
+layover, so those days stay separate.
+
 The header of the panel shows the totals, for example *"2 crew member(s) · 60 duty day(s) ·
 32 selected"*, and the verdict repeats how many days were checked.
 
@@ -513,6 +526,13 @@ because neither of them can be swapped.
   ticked: the tick is locked and the card says "Sick leave — not swappable". The check also
   rejects a request that carries an SL day. It is a rule of its own, so sick leave can be
   allowed or not allowed without touching the annual leave rule.
+- **A layover is swapped with the flight home** — a duty that ends at an outport leaves the crew
+  member there, so it has to be swapped together with the flight that brings them home from
+  that station. The app finds the pair from the sector (the duty that ends at an outport, and
+  the next flight out of that station that ends at `HKG`) and ticks the two together on both
+  crew members, so the request is complete as soon as the outport duty is ticked. The check
+  rejects a request that carries one of the two without the other. A same-day turnaround is not
+  a layover.
 - **NB / NDA / A / GD cannot be swapped** - one rule covers all four codes. `NB` and `NDA` carry no
   duty, so there is nothing to swap, and the ground duties `A` and `GD` cannot be swapped
   either: they can neither be swapped out nor taken in place of a duty. While the rule is on, an
