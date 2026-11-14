@@ -1299,6 +1299,60 @@ function blockHoursForInput(v){
   return isFinite(n) ? String(n) : "";
 }
 
+/* ============================================================
+   LOCAL TIME AND TIME ZONES
+   ============================================================ */
+
+/* The roster is based in Hong Kong, so every airport on it is on GMT+8 unless
+   it is one of the places below. The times printed on a roster are local
+   times, so a flight that crosses a time zone is not as long as the clock
+   difference between the two ends: Hong Kong to Japan (GMT+9) is an hour
+   shorter than the clock says, and an hour longer on the way home. */
+const HOME_OFFSET = 8;
+const AIRPORT_OFFSETS = {
+  CTS: 9, FUK: 9, KIX: 9, OKA: 9, NRT: 9, SDJ: 9,   /* Japan */
+  BKK: 7, HKT: 7,                                   /* Thailand */
+  MLE: 5,                                           /* Maldives */
+  ROR: 9,                                           /* Palau */
+  DAD: 7, PQC: 7,                                   /* Vietnam */
+  PKZ: 7                                            /* Laos */
+};
+
+/* The offset of one airport in hours. Anything not on the list is on Hong
+   Kong time, which is the base the roster is built on. */
+function airportOffset(code){
+  const c = String(code || "").trim().toUpperCase();
+  const off = AIRPORT_OFFSETS[c];
+  return typeof off === "number" ? off : HOME_OFFSET;
+}
+
+/* The sector reads "HKG TPE", "CTS HKG" or "HKG TPE → TPE KHH": the first
+   airport is where the flight leaves and the last is where it lands. */
+function sectorAirports(sector){
+  const parts = String(sector || "").toUpperCase().split(/[^A-Z]+/).filter(Boolean);
+  if(!parts.length) return { from:"", to:"" };
+  return { from: parts[0], to: parts[parts.length - 1] };
+}
+
+/* The minutes to add to the clock difference between the two ends of a
+   sector: negative when the flight lands earlier on the clock than the
+   difference says (Hong Kong to Japan), positive on the way home. */
+function zoneAdjustMinutes(sector){
+  const a = sectorAirports(sector);
+  if(!a.from || !a.to) return 0;
+  return (airportOffset(a.from) - airportOffset(a.to)) * 60;
+}
+
+/* The block hours of a flight from two local times, with the clock difference
+   between the two airports taken off. */
+function blockMinutesBetween(depHm, arrHm, sector){
+  const mins = minutesApart(depHm, arrHm);
+  if(mins === null) return null;
+  let block = mins + zoneAdjustMinutes(sector);
+  while(block < 0) block += 24*60;
+  return block;
+}
+
 /* The date column shows the weekday and the day of the month, the way the
    crew roster app lists them. */
 function updateDutyDateLabel(el){
@@ -1502,10 +1556,12 @@ function syncDutyFields(el){
 /* The block hour of a duty is the flight time from departure to arrival.
    When the roster printed no block hour, it is worked out from the duty times:
    Duty Start is 65 min before departure and Duty End 30 min after arrival. */
-function deriveBlockHours(startHm, endHm){
+function deriveBlockHours(startHm, endHm, sector){
   const mins = minutesApart(startHm, endHm);
   if(mins === null) return "";
-  const block = mins - 95;
+  /* the duty times are local times at the two ends of the sector, and the
+     roster allows 65 minutes before the departure and 30 after the arrival */
+  const block = mins - 95 + zoneAdjustMinutes(sector);
   if(block <= 0) return "";
   return (block/60).toFixed(2);
 }
@@ -1806,15 +1862,32 @@ function addDutyDay(crewEl, data){
     /* the code can lock this card and the same date on the other crew member */
     refreshSwapLocks();
   });
+  /* the sector decides the time difference between the two ends, so a block
+     hour that came from the times follows it */
+  el.querySelector(".d-sector").addEventListener("input", () => {
+    if(el.dataset.blockDerived !== "1") return;
+    if(el.querySelector(".d-flight").value.indexOf("→") >= 0) return;
+    el.dataset.block = deriveBlockHours(
+      el.querySelector(".d-start").value,
+      el.querySelector(".d-end").value,
+      el.querySelector(".d-sector").value
+    );
+    updatePartyTotals();
+  });
   /* a flight with no printed block hour gets one from its duty times */
   ["start","end"].forEach(k => {
     el.querySelector(".d-" + k).addEventListener("input", () => {
-      if(el.dataset.block) return;
+      if(el.dataset.block && el.dataset.blockDerived !== "1") return;
       if(el.dataset.dutyType !== "Flight") return;
+      /* a day with more than one sector has no block that can be worked out
+         from the duty window: it is the sum of the sectors */
+      if(el.querySelector(".d-flight").value.indexOf("→") >= 0) return;
       el.dataset.block = deriveBlockHours(
         el.querySelector(".d-start").value,
-        el.querySelector(".d-end").value
+        el.querySelector(".d-end").value,
+        el.querySelector(".d-sector").value
       );
+      el.dataset.blockDerived = "1";
       updatePartyTotals();
     });
   });
@@ -3574,7 +3647,7 @@ function renderOcrRows(){
       '<label class="f f-dep"><span class="cap">Dep Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-dep" placeholder="HHMM" value="'+esc(hmToDigits(r.dep))+'"></label>' +
       '<label class="f f-arr"><span class="cap">Arr Time</span><input type="text" inputmode="numeric" maxlength="5" class="o-arr" placeholder="HHMM" value="'+esc(hmToDigits(r.arr))+'"></label>' +
       '<label class="f f-period"><span class="cap">Duty Period</span><input type="text" class="o-period" placeholder="h:mm" value="'+esc(r.period||"")+'" autocapitalize="off" autocorrect="off" spellcheck="false"></label>' +
-      '<label class="f f-block"><span class="cap">Block Hour</span><input type="text" class="o-block" placeholder="h:mm" value="'+esc(r.block||"")+'" autocapitalize="off" autocorrect="off" spellcheck="false"></label>' +
+      '<label class="f f-block" title="The time in the air: departure to arrival, with the clock difference between the two airports taken off"><span class="cap">Block Hour</span><input type="text" class="o-block" placeholder="h:mm" value="'+esc(r.block||"")+'" autocapitalize="off" autocorrect="off" spellcheck="false"></label>' +
       '<button class="row-del" title="Remove row" aria-label="Remove row">×</button>';
 
     /* the duty code decides which fields can apply, which the narrow layout uses */
@@ -3604,6 +3677,13 @@ function renderOcrRows(){
         /* a duty start or block hour typed by hand is kept as it is typed */
         if(key === "block") r.blockFollowsTimes = false;
         if(key === "start") r.startFollowsDep = false;
+        /* the sector says which time zone each end is in, so a block hour
+           that came from the times follows it */
+        if(key === "sector"){
+          refreshDerivedTimes(r, "sector");
+          const bf = main.querySelector(".o-block");
+          if(bf) bf.value = r.block || "";
+        }
         if(key === "date" || key === "start" || key === "end"){
           field.classList.remove("low");
           if(key === "date" && !r.date) field.classList.add("low");
@@ -3706,6 +3786,7 @@ function updateOcrCount(){
    departure time to begin with. A duty end or block hour typed by hand is kept. */
 function refreshDerivedTimes(r, changed){
   const timeChanged = (changed === "dep" || changed === "arr");
+  const sectorChanged = (changed === "sector");
 
   if(timeChanged && r.arr){
     const m = hmToMin(r.arr);
@@ -3715,8 +3796,10 @@ function refreshDerivedTimes(r, changed){
     const mins = minutesApart(r.start, r.end);
     if(mins !== null) r.period = rosterDuration(mins);
   }
-  if(timeChanged && r.blockFollowsTimes !== false && r.dep && r.arr){
-    const bm = minutesApart(r.dep, r.arr);
+  if((timeChanged || sectorChanged) && r.blockFollowsTimes !== false && r.dep && r.arr){
+    /* The dep and arr times are local times, so a flight that crosses a time
+       zone is not as long as the clock difference says. */
+    const bm = blockMinutesBetween(r.dep, r.arr, r.sector);
     if(bm !== null) r.block = rosterDuration(bm);
   }
 }
@@ -3835,10 +3918,12 @@ function buildRosterRecord(o){
     if(dm !== null && rec.dutyStart && rec.dutyEnd) rec.dutyPeriod = rosterDuration(dm);
   }
   if(!rec.blockHour){
-    /* Block hour is a local-time figure; deriving it from Dep/Arr is only a
-       fallback for a roster that prints no BLOCK column. It is never the
-       duty period — a day off or standby has no block. */
-    const bm = minutesApart(rec.depTime, rec.arrTime);
+    /* The block hour is the time between the departure and the arrival, and
+       both are local times: a flight that crosses a time zone is not as long
+       as the clock difference says. Deriving it from Dep/Arr is only a
+       fallback for a roster that prints no BLOCK column — it is never the
+       duty period, because a day off or a standby has no block. */
+    const bm = blockMinutesBetween(rec.depTime, rec.arrTime, rec.sector);
     if(bm !== null && rec.depTime && rec.arrTime) rec.blockHour = rosterDuration(bm);
   }
   rec.blockHour = normaliseDuration(rec.blockHour);

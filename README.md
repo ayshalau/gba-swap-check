@@ -80,9 +80,11 @@ roster fields are filled from them like this:
 - The mapping is the rule, so it is applied even if the uploaded PDF happens to print its
   own Duty Start, Duty End or Duty Period. A printed value is used only when the row has no
   STD or STA to derive from (for example a ground duty with no flight times).
-- Duty Period is the total time from Duty Start to Duty End.
-- Block Hour is read from the sheet. It is a local-time figure that accounts for the
-  time-zone difference between the stations, so it cannot be derived from STD and STA.
+- Duty Period is the total time from Duty Start to Duty End. It is a local-time figure, the
+  way the roster sheet prints it.
+- Block Hour is read from the sheet. It is the time actually spent in the air, so it is
+  **not** the clock difference between the departure and the arrival when the two stations sit
+  in different time zones — see **Time zones** below.
 - A Flight No is recognised by its shape (`HB702`, `HB 2352`) and is written with a space
   as the sheet shows (`HB 880`). A standby or other duty code (`H04`, `H14`, `A`, `GD`) is
   not a flight number.
@@ -122,12 +124,43 @@ the PDF missed. Fill in the date, the flight number and the departure and arriva
 the rest follows the same mapping as an imported row:
 
 - **Duty Start** = Dep Time − 65 min, **Duty End** = Arr Time + 30 min
-- **Duty Period** = Duty Start to Duty End, **Block Hour** = Dep Time to Arr Time
+- **Duty Period** = Duty Start to Duty End, **Block Hour** = Dep Time to Arr Time, with the
+  clock difference between the two airports taken off
 
 The weekday is filled in from the date, and the row moves into date order once the date is
 picked, so it sits with the rest of the roster. Adding a second flight on a date already in
 the roster makes a two-sector duty day, which is shown as one duty: Duty Start on the first
 sector, Duty End and the total Duty Period on the last.
+
+#### Time zones
+
+The roster is based in Hong Kong, so **every station is GMT+8** unless it is one of these:
+
+| Time zone | Airports |
+|---|---|
+| GMT+9 | `CTS` Sapporo, `FUK` Fukuoka, `KIX` Kansai, `OKA` Okinawa, `NRT` Narita, `SDJ` Sendai, `ROR` Koror (Palau) |
+| GMT+7 | `BKK` Bangkok, `HKT` Phuket, `DAD` Da Nang, `PQC` Phu Quoc, `PKZ` Pakse |
+| GMT+5 | `MLE` Malé (Maldives) |
+
+The times on a roster are **local times**, so the block hours of a flight are not simply the
+clock difference between the departure and the arrival:
+
+- Hong Kong to Japan (GMT+9): the flight is **an hour shorter** than the clock says.
+  HB 880, `HKG CTS`, departs 09:15 and lands 15:00 — a clock difference of 5:45 and a block
+  of **4:45**.
+- Japan to Hong Kong: the flight is **an hour longer** than the clock says. HB 881, `CTS HKG`,
+  departs 16:00 and lands 20:40 — a clock difference of 4:40 and a block of **5:40**.
+- Hong Kong to Thailand, Vietnam or Laos (GMT+7): **an hour longer**. Hong Kong to the
+  Maldives (GMT+5): **three hours longer**.
+
+The app works this out from the sector — the first airport is where the flight leaves and the
+last is where it lands — whenever it derives a block hour: a flight added by hand, a row whose
+times are amended, or a duty card with no printed block hour. A **block hour printed by the
+roster is never changed**; the zone-aware figure reproduces it exactly, which is how the rule
+was checked against the sheet.
+
+The **Duty Period** is a different figure: it is the time from Duty Start to Duty End as the
+roster prints it, in local time, and it is left alone.
 
 #### Amending a time by hand
 
@@ -137,7 +170,7 @@ Changing the **Dep Time** or the **Arr Time** of a row moves the fields that fol
 |---|---|
 | Duty End | Arr Time + 30 min |
 | Duty Period | Duty Start to Duty End |
-| Block Hour | Dep Time to Arr Time |
+| Block Hour | Dep Time to Arr Time, less the clock difference between the two airports |
 
 The **Duty Start** is the crew's report time and is left where it is, so amending a flight
 time never moves it. The exception is a row added by hand with **Add Flight Duty**: its Duty
@@ -145,7 +178,8 @@ Start was worked out from the Dep Time, so it follows the Dep Time until a start
 
 A **Duty End** or **Block Hour** typed by hand is kept as it is typed, and is not overwritten
 when a flight time is amended. A row whose block hour was printed by the roster keeps that
-figure until one of its flight times is amended.
+figure until one of its flight times is amended. Amending the **Sector** also refreshes a
+block hour that came from the times, because the sector says which time zone each end is in.
 
 #### Exporting
 
