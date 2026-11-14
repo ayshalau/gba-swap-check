@@ -4116,9 +4116,7 @@ async function exportRosterPdf(records, opts){
      The same line the preview shows under the crew name field: the duty days,
      then the days off by code, so the PDF and the app always agree. */
   const tally = rosterTally(records);
-  const tallyParts = [tally.duty + " duty day(s)"];
-  if(tally.hasOff) tallyParts.push(tally.do + " DO", tally.dor + " DO-R", tally.al + " AL", tally.sl + " SL");
-  const tallyText = tallyParts.join(" · ");
+  const tallyText = rosterTallyParts(tally).map(p => p.n + " " + p.label).join(" · ");
 
   const tallyH = 7.5;
   doc.setFillColor(240, 248, 249);
@@ -4452,6 +4450,18 @@ function rosterTally(records){
   };
 }
 
+/* The tally as a list of parts, so the screen and the exported PDF print the
+   same figures. A code is only listed when the roster holds one: a roster
+   without sick leave carries no empty SL column. */
+function rosterTallyParts(tally){
+  const parts = [{ n: tally.duty, label: "duty day(s)" }];
+  if(tally.hasOff){
+    parts.push({ n: tally.do, label: "DO" }, { n: tally.dor, label: "DO-R" }, { n: tally.al, label: "AL" });
+    if(tally.sl) parts.push({ n: tally.sl, label: "SL" });
+  }
+  return parts;
+}
+
 function renderRosterPreview(records){
   const t = document.getElementById("roster-preview");
   if(!records.length){
@@ -4489,11 +4499,8 @@ function renderRosterPreview(records){
   /* the tally sits under the crew name field: the duty days, then the days
      off by code */
   const tally = rosterTally(records);
-  const offText = tally.hasOff
-    ? " · <b>" + tally.do + "</b> DO · <b>" + tally.dor + "</b> DO-R · <b>" + tally.al + "</b> AL · <b>" + tally.sl + "</b> SL"
-    : "";
   document.getElementById("roster-pdf-count").innerHTML =
-    "<b>" + tally.duty + "</b> duty day(s)" + offText;
+    rosterTallyParts(tally).map(p => "<b>" + p.n + "</b> " + p.label).join(" · ");
 }
 
 function refreshRosterPdfPanel(){

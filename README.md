@@ -105,7 +105,7 @@ roster fields are filled from them like this:
   no sector and no duty times, and it is not a duty day. Unlike `DO` and `DO-R` it **cannot be
   swapped** — see the rule *Sick Leave (SL) Cannot Be Swapped* — so its tick is locked and the
   card says "Sick leave - not swappable". The printed code `SL` is kept, and the tally counts
-  it in its own `SL` column.
+  it in its own `SL` column, which only appears when the roster holds a sick leave.
 - A two-sector duty day is one duty: Duty Start on the first sector row, Duty End and the
   total Duty Period on the last row, with the duty cells in between left blank.
 - Whatever headings the uploaded PDF uses, the imported roster is always shown in the
@@ -113,10 +113,11 @@ roster fields are filled from them like this:
   Day and SD carry no extra meaning in a swap check, so neither is shown in the
   **Extracted Duty Days** editor; both are still read from the PDF and kept in the data.
 - Under the crew name field in the **Roster Preview** sits the tally of the uploaded roster: the
-  duty days and the days off by code, for example *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL · 0 SL"*.
-  `DO`, the day off requested `DO-R`, `AL` and the sick leave `SL` are each counted on their own,
-  so the numbers add up to
-  the days on the roster. The tally is shown on a phone as well as on a desktop.
+  duty days and the days off by code, for example *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL"*. `DO`,
+  the day off requested `DO-R` and `AL` are each counted on their own, so the numbers add up to
+  the days on the roster. The sick leave `SL` is counted on its own as well, and its column only
+  appears when the roster holds a sick leave — a roster without one carries no empty `SL` column.
+  The tally is shown on a phone as well as on a desktop.
 
 The **Extracted Duty Days** rows show Date, Duty, Sector, Duty Start, Dep Time, Arr Time,
 Duty End, Duty Period and Block Hour. Times are entered as four digits (`0810`) and
@@ -442,7 +443,8 @@ jsPDF:
   no block, so they do not change the total.
 - The **duty day count** and the **days off by code** (`DO`, `DO-R`, `AL`, `SL`) are printed together
   as a tally under the crew name field and at the head of the exported PDF — for example
-  *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL · 0 SL"*. The duty day count leaves out days off and counts
+  *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL"*, with an `SL` column added when the roster holds a
+  sick leave. The duty day count leaves out days off and counts
   several flights on the same date as one duty day. The same tally is repeated in the footer of
   every PDF page.
 - When a duty day has more than one flight, the date is printed on the first row only and
