@@ -1805,6 +1805,26 @@ function refreshSwapLocks(){
   updateSummary();
 }
 
+/* A date can only be carried by one duty day: when a duty day is added, or
+   moved to a date another duty day already holds, the newest one replaces the
+   older one. The other crew member still carries that date, so the pairing
+   follows whatever the new card is set to. */
+function replaceDutyOnSameDate(crewEl, card, date){
+  if(!crewEl || !date) return false;
+  let replaced = false;
+  [...crewEl.querySelectorAll(".duty-day")].forEach(other => {
+    if(other === card) return;
+    const f = other.querySelector(".d-date");
+    if(!f || f.value !== date) return;
+    other.remove();
+    replaced = true;
+  });
+  if(!replaced) return false;
+  const box = card.querySelector(".d-check");
+  syncSameDateTicks([{ date: date, on: !!(box && box.checked) }], crewEl);
+  return true;
+}
+
 function addDutyDay(crewEl, data){
   const d = data || {};
   const el = document.createElement("div");
@@ -1902,11 +1922,18 @@ function addDutyDay(crewEl, data){
   });
   el.querySelector(".d-date").addEventListener("change", () => {
     updateDutyDateLabel(el);
+    const party = el.closest(".party");
+    /* a date can only be carried by one duty day: the card that has just
+       been given this date replaces the older one on it */
+    if(replaceDutyOnSameDate(party, el, el.querySelector(".d-date").value)){
+      updateSelCount(party);
+      updatePartyTotals();
+    }
     /* the date decides which day the other crew member is paired with */
     refreshSwapLocks();
     /* and where the card sits in the list - the card moves, so the focus is
        put back on the date field the user just used */
-    sortDutyDays(el.closest(".party"));
+    sortDutyDays(party);
     try{ el.querySelector(".d-date").focus({ preventScroll:true }); }catch(e){}
   });
   /* clicking the day number opens the date picker */
@@ -1925,6 +1952,12 @@ function addDutyDay(crewEl, data){
   /* the two times read in the roster's own 24-hour format */
   bindFieldOwnText(el.querySelector(".d-start"));
   bindFieldOwnText(el.querySelector(".d-end"));
+  /* a date can only be carried by one duty day: this card replaces an older
+     one on the same date */
+  if(replaceDutyOnSameDate(crewEl, el, el.querySelector(".d-date").value)){
+    updateSelCount(crewEl);
+    updatePartyTotals();
+  }
   /* the cards are listed from the oldest date */
   sortDutyDays(crewEl);
   /* the new card can lock the same date on the other crew member */

@@ -222,7 +222,9 @@ of the list, Crew B the one below it. Crew B needs a second crew member to exist
 it says so and nothing is added.
 
 The same roster is normally sent to both crew members, since a swap covers both of them, so
-the extracted rows stay in the import after they have been added and can be sent again.
+the extracted rows stay in the import after they have been added and can be sent again. Sending
+the same roster again does not double the cards: a date can only be carried by one duty day,
+so the duty days already on the crew member are replaced by the new ones.
 
 ## The Swap Check page
 
@@ -238,6 +240,11 @@ Each duty day is shown the way the crew roster app lists it: the weekday and the
 month in a narrow column on the left (`SUN` over `8`), and the duty itself in a card beside it —
 **Duty**, **Sector**, **Duty Start** and **Duty End**. Click the day number to change the date.
 A second sector on the same day gets its own row with the same date.
+
+**A date can only be carried by one duty day.** A duty day added with a date another duty day
+already holds replaces it, and the same goes for a duty day whose date is changed to a date
+another one holds: the newest wins and the older card is removed. The other crew member still
+carries that date, so the pairing follows whatever the new card is set to.
 
 There is no duty type column: the type follows the duty code — `DO`, `AL` and `SL` are days off, a
 standby code (`H04`, `H14`) is a standby, `DUTY`, `NDA`, `NB` and `DO-R` are duties with no
