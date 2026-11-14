@@ -1050,7 +1050,7 @@ const DEFAULT_RULES = [
     text:"The maximum number of consecutive DO allowed is <b>4</b>. The days off counted are the ones the crew member holds <b>after the swap</b> - the days off that are not swapped away, plus the days off taken in from the other crew member. A day off requested (<b>DO-R</b>) counts as a DO; an annual leave (<b>AL</b>) and a sick leave (<b>SL</b>) do not." },
   { group:"3. Day Off (DO) and Standby Duty", id:"doEarliestStart", on:true, label:"Earliest Duty Start After DO / DO-R / AL",
     value:"06:00", unit:"", numeric:false, time:true,
-    text:"A day off cannot be followed by duty earlier than <b>0600</b>. This applies to every kind of rest day: a <b>DO</b>, a day off requested (<b>DO-R</b>), an annual leave (<b>AL</b>) and a sick leave (<b>SL</b>). A duty that starts too early on the day after one of them is rejected." },
+    text:"A day off cannot be followed by duty earlier than <b>0600</b>. This applies to a <b>DO</b>, a day off requested (<b>DO-R</b>) and an annual leave (<b>AL</b>). A sick leave (<b>SL</b>) is not one of them, so a duty after a sick leave is not judged by this rule." },
   { group:"3. Day Off (DO) and Standby Duty", id:"dutyEndBuffer", on:true, label:"Duty End Buffer After STA / ATA",
     value:30, unit:"mins", numeric:true,
     text:"Duty end time is <b>30 minutes after STA / ATA</b> or end of Standby duty period." },
@@ -1389,7 +1389,15 @@ function dutyCodes(code){
    days off and behave exactly the same. */
 function isDayOffCode(code){
   const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
-  return s === "DO" || s === "AL" || s === "DO-R" || s === "DOR" || s === "SL";
+  return isRestDayCode(s) || s === "SL";
+}
+
+/* The rest days that count for the rules about the day after a day off: a day
+   off, a day off requested and an annual leave. A sick leave is a day off, but
+   it is not one of them. */
+function isRestDayCode(code){
+  const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
+  return s === "DO" || s === "AL" || s === "DO-R" || s === "DOR";
 }
 
 /* The duty cards of a crew member are listed from the oldest date. A card that
@@ -1823,6 +1831,21 @@ function replaceDutyOnSameDate(crewEl, card, date){
   const box = card.querySelector(".d-check");
   syncSameDateTicks([{ date: date, on: !!(box && box.checked) }], crewEl);
   return true;
+}
+
+/* The rest day a duty day follows, when it is one the rest-day rules count:
+   a day off, a day off requested or an annual leave. A sick leave is not one
+   of them, so a duty after a sick leave is not judged by these rules. */
+function restDayCode(d){
+  if(!d) return "";
+  const codes = dutyCodes(d.flight || "");
+  for(const c of codes){
+    const s = c.trim().toUpperCase().replace(/\s+/g, "");
+    if(isRestDayCode(s)) return s;
+  }
+  /* a card whose code was cleared still counts as the kind of day it was */
+  if(d.type === "DO" && !codes.length) return "DO";
+  return "";
 }
 
 function addDutyDay(crewEl, data){
@@ -2412,14 +2435,15 @@ function validate(data){
       }
     }
 
-    /* Rule 3 — a day off (DO, DO-R, AL, SL) cannot be followed by duty earlier
-       than 0600 */
+    /* Rule 3 — a day off (DO, DO-R, AL) cannot be followed by duty earlier
+       than 0600. A sick leave is not one of them. */
     if(ruleOn("doEarliestStart")){
       const earliest = ruleTime("doEarliestStart", 360); /* 06:00 */
       const sorted = [...roster].sort((a,b) => (a.date||"").localeCompare(b.date||""));
       for(let i = 0; i < sorted.length - 1; i++){
         const cur = sorted[i], nxt = sorted[i+1];
-        if(cur.type !== "DO" || nxt.type === "DO") continue;
+        const rest = restDayCode(cur);
+        if(!rest || nxt.type === "DO") continue;
         const gap = daysBetween(cur.date, nxt.date);
         if(gap !== 1) continue;
         if(!focused([cur.date, nxt.date])) continue;   /* the selected day */
@@ -2427,8 +2451,7 @@ function validate(data){
         if(s === null) continue;
         if(s < earliest){
           /* the finding says which rest day it is about */
-          const code = String(cur.flight || "").trim().toUpperCase();
-          const what = code === "AL" ? "an AL" : (code === "SL" ? "an SL" : (code ? "a " + code : "a DO"));
+          const what = rest === "AL" ? "an AL" : "a " + rest;
           issues.push({ ok:false, who, text:who+": duty on "+fmtDate(nxt.date)+" starts at "+minToHm(s)+"L, earlier than the "+minToHm(earliest)+"L minimum after "+what+"." });
         }
       }
