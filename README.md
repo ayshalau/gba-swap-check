@@ -139,7 +139,7 @@ The roster is based in Hong Kong, so **every station is GMT+8** unless it is one
 | Time zone | Airports |
 |---|---|
 | GMT+9 | `CTS` Sapporo, `FUK` Fukuoka, `KIX` Kansai, `OKA` Okinawa, `NRT` Narita, `SDJ` Sendai, `ROR` Koror (Palau) |
-| GMT+7 | `BKK` Bangkok, `HKT` Phuket, `DAD` Da Nang, `PQC` Phu Quoc, `PKZ` Pakse |
+| GMT+7 | `BKK` Bangkok, `HKT` Phuket, `DAD` Da Nang, `PQC` Phu Quoc, `PKZ` Pakse, `SUB` Surabaya |
 | GMT+5 | `MLE` Malé (Maldives) |
 
 The times on a roster are **local times**, so the block hours of a flight are not simply the
@@ -150,8 +150,8 @@ clock difference between the departure and the arrival:
   of **4:45**.
 - Japan to Hong Kong: the flight is **an hour longer** than the clock says. HB 881, `CTS HKG`,
   departs 16:00 and lands 20:40 — a clock difference of 4:40 and a block of **5:40**.
-- Hong Kong to Thailand, Vietnam or Laos (GMT+7): **an hour longer**. Hong Kong to the
-  Maldives (GMT+5): **three hours longer**.
+- Hong Kong to Thailand, Vietnam, Laos or Indonesia (GMT+7): **an hour longer**. Hong Kong to
+  the Maldives (GMT+5): **three hours longer**.
 
 The app works this out from the sector — the first airport is where the flight leaves and the
 last is where it lands — whenever it derives a block hour: a flight added by hand, a row whose
