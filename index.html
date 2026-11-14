@@ -1050,7 +1050,7 @@ const DEFAULT_RULES = [
     text:"The maximum number of consecutive DO allowed is <b>4</b>. The days off counted are the ones the crew member holds <b>after the swap</b> - the days off that are not swapped away, plus the days off taken in from the other crew member. A day off requested (<b>DO-R</b>) counts as a DO; an annual leave (<b>AL</b>) and a sick leave (<b>SL</b>) do not." },
   { group:"3. Day Off (DO) and Standby Duty", id:"doEarliestStart", on:true, label:"Earliest Duty Start After DO / DO-R / AL",
     value:"06:00", unit:"", numeric:false, time:true,
-    text:"A day off cannot be followed by duty earlier than <b>0600</b>. This applies to a <b>DO</b>, a day off requested (<b>DO-R</b>) and an annual leave (<b>AL</b>). A sick leave (<b>SL</b>) is not one of them, so a duty after a sick leave is not judged by this rule." },
+    text:"A day off cannot be followed by duty earlier than <b>0600</b>. This applies to a <b>DO</b>, a day off requested (<b>DO-R</b>) and an annual leave (<b>AL</b>)." },
   { group:"3. Day Off (DO) and Standby Duty", id:"dutyEndBuffer", on:true, label:"Duty End Buffer After STA / ATA",
     value:30, unit:"mins", numeric:true,
     text:"Duty end time is <b>30 minutes after STA / ATA</b> or end of Standby duty period." },

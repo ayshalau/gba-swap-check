@@ -532,8 +532,7 @@ because neither of them can be swapped.
   counted as a DO in this rule.
 - A day off cannot be followed by duty earlier than 0600. The rule **Earliest Duty Start After DO /
   DO-R / AL** applies to a `DO`, a day off requested (`DO-R`) and an annual leave (`AL`), and the
-  finding says which one it is about (*"earlier than the 06:00L minimum after an AL"*). A sick
-  leave (`SL`) is **not** one of them, so a duty after a sick leave is not judged by this rule.
+  finding says which one it is about (*"earlier than the 06:00L minimum after an AL"*).
 - Duty end time is 30 minutes after STA / ATA or end of standby duty period.
 - Any swap resulting in a duty end beyond 2330L before a DO is not approved.
 - A crewmember shall not be on duty more than 6 consecutive days; duty end on the 6th duty
