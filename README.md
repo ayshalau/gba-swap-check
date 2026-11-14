@@ -12,7 +12,7 @@ request from it.
 
 - **Swap Check** - build a swap request from crew members, each listing their duty days in the request. Runs the full rule set and returns an approve/reject verdict with itemized findings.
 - **Roster Import** — upload a roster PDF and read it in the browser. Duty days are extracted as editable rows, then added to a swap request in one click. The file is never uploaded to a server.
-- **Rules** - all 33 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
+- **Rules** - all 34 rules are grouped by their source policy section. Toggle any rule off, or edit its threshold. Settings persist locally.
 - **Records** - every check is saved with its result and findings; filter by result, search, load back into the form, delete, or export to CSV.
 
 ## Roster import
@@ -53,7 +53,7 @@ The GBA roster this is built for has these columns:
 - The first `STD` / `STA` are local times and are the ones used. The second pair is
   UTC and is ignored.
 - `TYPE OF DUTY` carries the duty code: `OP - (FA4)` for a flight, `STB - H04` for
-  standby, `OTH - A` / `OTH - GD` for other duties, and `DO` / `AL` for a day off or
+  standby, `OTH - A` / `OTH - GD` for other duties, and `DO` / `AL` / `SL` for a day off or
   leave. The day off requested `DO-R` is read as a day off as well.
 - `S NO` and `REMARK` are ignored.
 
@@ -89,7 +89,7 @@ roster fields are filled from them like this:
   as the sheet shows (`HB 880`). A standby or other duty code (`H04`, `H14`, `A`, `GD`) is
   not a flight number.
 - Standby (`STB - H04`) fills Duty Start from STD and Duty End from STA, with no Dep Time,
-  Arr Time or Block Hour. `DO` and `AL` leave every time blank. A standby is added to the swap
+  Arr Time or Block Hour. `DO`, `AL` and `SL` leave every time blank. A standby is added to the swap
   request as a **Standby** duty, so the standby rules apply to it.
 - A duty with no times at all — `DUTY`, `NDA` and `NB` — is added to the request as a
   **Duty**: it carries no sector, no duty start and no duty end, and its card shows the duty
@@ -101,6 +101,11 @@ roster fields are filled from them like this:
   duty day, and it can be swapped like any other day off. Only the roster sheet keeps the
   printed code `DO-R`, so the requested day off is still recognisable, and the tally counts it
   in its own `DO-R` column.
+- The sick leave `SL` is a **day off** as well: it is added to the request as a **Day Off**, with
+  no sector and no duty times, and it is not a duty day. Unlike `DO` and `DO-R` it **cannot be
+  swapped** — see the rule *Sick Leave (SL) Cannot Be Swapped* — so its tick is locked and the
+  card says "Sick leave - not swappable". The printed code `SL` is kept, and the tally counts
+  it in its own `SL` column.
 - A two-sector duty day is one duty: Duty Start on the first sector row, Duty End and the
   total Duty Period on the last row, with the duty cells in between left blank.
 - Whatever headings the uploaded PDF uses, the imported roster is always shown in the
@@ -108,8 +113,9 @@ roster fields are filled from them like this:
   Day and SD carry no extra meaning in a swap check, so neither is shown in the
   **Extracted Duty Days** editor; both are still read from the PDF and kept in the data.
 - Under the crew name field in the **Roster Preview** sits the tally of the uploaded roster: the
-  duty days and the days off by code, for example *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL"*. `DO`,
-  the day off requested `DO-R` and `AL` are each counted on their own, so the numbers add up to
+  duty days and the days off by code, for example *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL · 0 SL"*.
+  `DO`, the day off requested `DO-R`, `AL` and the sick leave `SL` are each counted on their own,
+  so the numbers add up to
   the days on the roster. The tally is shown on a phone as well as on a desktop.
 
 The **Extracted Duty Days** rows show Date, Duty, Sector, Duty Start, Dep Time, Arr Time,
@@ -232,7 +238,7 @@ month in a narrow column on the left (`SUN` over `8`), and the duty itself in a 
 **Duty**, **Sector**, **Duty Start** and **Duty End**. Click the day number to change the date.
 A second sector on the same day gets its own row with the same date.
 
-There is no duty type column: the type follows the duty code — `DO` and `AL` are days off, a
+There is no duty type column: the type follows the duty code — `DO`, `AL` and `SL` are days off, a
 standby code (`H04`, `H14`) is a standby, `DUTY`, `NDA`, `NB` and `DO-R` are duties with no
 times and anything else is a flight. The time labels follow the type ("Standby Start",
 "DO Starts").
@@ -246,7 +252,7 @@ way the crew roster app lists them:
 | `H04`, `H14` (standby) | Duty, Standby Start, Standby End |
 | `A`, `GD` (other ground duty) | Duty, Duty Start, Duty End |
 | `DUTY`, `NDA`, `NB`, `DO-R` (duty with no times) | Duty |
-| `DO`, `AL` (day off or leave) | Duty |
+| `DO`, `AL`, `SL` (day off or leave) | Duty |
 
 A duty with no times, a day off or a leave shows only its duty code, so its duty field stays
 narrow while the card itself keeps the same size as the others. Every row is the same height, so
@@ -262,8 +268,9 @@ swap check. The tick is on by default, and the header of each crew member shows 
 are ticked with a button to **Select all** or **Clear** them. The selection is saved with the
 record and restored when it is loaded back into the form.
 
-Days that cannot be ticked — an annual leave, and the `NB` / `NDA` / `A` / `GD` codes covered by the
-**NB / NDA / A / GD Cannot Be Swapped** rule — are left out of the count and out of the
+Days that cannot be ticked — an annual leave, a sick leave, and the `NB` / `NDA` / `A` / `GD` codes covered by the
+**Annual Leave (AL) Cannot Be Swapped**, **Sick Leave (SL) Cannot Be Swapped** and
+**NB / NDA / A / GD Cannot Be Swapped** rules — are left out of the count and out of the
 **Select all** / **Clear** button, so the button always says what it will do: *"23 of 23
 selected · 7 not swappable"* with **Clear** means the 23 swappable days are all ticked and the
 button unticks them.
@@ -280,7 +287,8 @@ it unticks the other side too. **Select all** also selects the same dates on the
 member, and the roster rows added with *Add to Swap Check* tick the matching dates on the other
 crew member. **Clear** works on that crew member alone — it never wipes the other crew member's
 request — so if one side is left empty the check says so ("Crew B swaps out no duty day"). A day
-that cannot be swapped - an annual leave, an NB / NDA / A / GD - is never ticked this way; it stays
+that cannot be swapped - an annual leave, a sick leave, an NB / NDA / A / GD - is never ticked
+this way; it stays
 locked.
 
 The header of the panel shows the totals, for example *"2 crew member(s) · 60 duty day(s) ·
@@ -432,9 +440,9 @@ jsPDF:
 - **Total Block Hours** is shown in the last row of both the preview and the exported PDF:
   the Block Hour column is added up and printed in its own column. Non-flight duties have
   no block, so they do not change the total.
-- The **duty day count** and the **days off by code** (`DO`, `DO-R`, `AL`) are printed together
+- The **duty day count** and the **days off by code** (`DO`, `DO-R`, `AL`, `SL`) are printed together
   as a tally under the crew name field and at the head of the exported PDF — for example
-  *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL"*. The duty day count leaves out days off and counts
+  *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL · 0 SL"*. The duty day count leaves out days off and counts
   several flights on the same date as one duty day. The same tally is repeated in the footer of
   every PDF page.
 - When a duty day has more than one flight, the date is printed on the first row only and
@@ -459,6 +467,10 @@ page, and only a much longer roster pages over.
 A DO that is shorter than the 34-hour minimum automatically rolls its end time forward
 until it spans the required local nights, so a 22:00 → 08:00 DO is treated as a valid
 2-night day off.
+
+A **leave** — an annual leave `AL` or a sick leave `SL` — is a **day off** with no times at
+all: it carries only its date and its code. It is not a duty day, and the tick is locked
+because neither of them can be swapped.
 
 ## Rules applied
 
@@ -487,6 +499,11 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
   out nor taken in place of a duty. While the rule is on, an AL day cannot be ticked at all: the
   tick is locked and the card says "Annual leave — not swappable". The check also rejects a
   request that carries an AL day.
+- **Sick Leave (SL) cannot be swapped** — a sick leave is a day off, not a duty day, so it can
+  neither be swapped out nor taken in place of a duty. While the rule is on, an SL day cannot be
+  ticked: the tick is locked and the card says "Sick leave — not swappable". The check also
+  rejects a request that carries an SL day. It is a rule of its own, so sick leave can be
+  allowed or not allowed without touching the annual leave rule.
 - **NB / NDA / A / GD cannot be swapped** - one rule covers all four codes. `NB` and `NDA` carry no
   duty, so there is nothing to swap, and the ground duties `A` and `GD` cannot be swapped
   either: they can neither be swapped out nor taken in place of a duty. While the rule is on, an
@@ -501,7 +518,8 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 - The maximum number of consecutive DO allowed is **4**. The days off counted are the ones the
   crew member holds **after the swap** — the days off that are not swapped away, plus the days
   off taken in from the other crew member. A day off requested (`DO-R`) counts as a DO here, so a
-  run of days off is measured across `DO` and `DO-R` alike. An annual leave (`AL`) is **not**
+  run of days off is measured across `DO` and `DO-R` alike. An annual leave (`AL`) and a sick
+  leave (`SL`) are **not**
   counted as a DO in this rule.
 - A DO cannot be followed by duty earlier than 0600.
 - Duty end time is 30 minutes after STA / ATA or end of standby duty period.
@@ -545,7 +563,8 @@ until it spans the required local nights, so a 22:00 → 08:00 DO is treated as 
 - These are **roster rules**, so they are measured on every duty day on the form for that crew
   member, not only on the ticked days — a swap is judged against the days around it. A window is
   only looked at when the form holds a card for **every day in it**, so a form that is only partly
-  filled is never judged on it. **A day off, a day off requested (`DO-R`) and an annual leave all
+  filled is never judged on it. **A day off, a day off requested (`DO-R`), an annual leave and a
+  sick leave all
   count as a day off.**
 - The old **Maximum Consecutive Days Off (4)** rule was replaced by these four, and has since been
   added back in group 3 as **Maximum Number of Consecutive Days Off (DO)** — the longest run of

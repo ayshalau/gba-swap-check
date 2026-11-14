@@ -1026,7 +1026,10 @@ const DEFAULT_RULES = [
     text:"Permit a <b>DO swapped for a DO</b> without the 50-hour block minimum applying." },
   { group:"2. Swap Limitations", id:"noAnnualLeaveSwap", on:true, label:"Annual Leave (AL) Cannot Be Swapped",
     value:1, unit:"", numeric:false,
-    text:"<b>Annual Leave (AL)</b> is not a duty day, so it cannot be swapped — neither swapped out nor taken in place of a duty. An AL day ticked in a swap request is rejected: untick it and swap an actual duty day instead." },
+    text:"<b>Annual Leave (AL)</b> is not a duty day, so it cannot be swapped - neither swapped out nor taken in place of a duty. An AL day ticked in a swap request is rejected: untick it and swap an actual duty day instead." },
+  { group:"2. Swap Limitations", id:"noSickLeaveSwap", on:true, label:"Sick Leave (SL) Cannot Be Swapped",
+    value:1, unit:"", numeric:false,
+    text:"<b>Sick Leave (SL)</b> is a day off, not a duty day, so it cannot be swapped - neither swapped out nor taken in place of a duty. An SL day ticked in a swap request is rejected: untick it and swap an actual duty day instead." },
   { group:"2. Swap Limitations", id:"noNbNdaSwap", on:true, label:"NB / NDA / A / GD Cannot Be Swapped",
     value:1, unit:"", numeric:false,
     text:"<b>NB</b> and <b>NDA</b> carry no duty, and the ground duties <b>A</b> and <b>GD</b> cannot be swapped either. None of them can be swapped. While the rule is on, such a day cannot be ticked: the tick is locked and the card says \"not swappable\". The check also rejects a request that carries one." },
@@ -1044,7 +1047,7 @@ const DEFAULT_RULES = [
     text:"An additional consecutive day off that follows must be of at least <b>24 hours</b>." },
   { group:"3. Day Off (DO) and Standby Duty", id:"maxConsecDo", on:true, label:"Maximum Number of Consecutive Days Off (DO)",
     value:4, unit:"days", numeric:true,
-    text:"The maximum number of consecutive DO allowed is <b>4</b>. The days off counted are the ones the crew member holds <b>after the swap</b> — the days off that are not swapped away, plus the days off taken in from the other crew member. A day off requested (<b>DO-R</b>) counts as a DO; an annual leave (<b>AL</b>) does not." },
+    text:"The maximum number of consecutive DO allowed is <b>4</b>. The days off counted are the ones the crew member holds <b>after the swap</b> - the days off that are not swapped away, plus the days off taken in from the other crew member. A day off requested (<b>DO-R</b>) counts as a DO; an annual leave (<b>AL</b>) and a sick leave (<b>SL</b>) do not." },
   { group:"3. Day Off (DO) and Standby Duty", id:"doEarliestStart", on:true, label:"Earliest Duty Start After DO",
     value:"06:00", unit:"", numeric:false, time:true,
     text:"A DO cannot be followed by duty earlier than <b>0600</b>." },
@@ -1371,8 +1374,9 @@ function updateDutyDateLabel(el){
   dom.textContent = String(d.getDate());
 }
 
-/* The duty type is worked out from the duty code: "DO", "AL" and the day off
-   requested "DO-R" are days off, a standby code (H04, H14) is a standby, anything else is
+/* The duty type is worked out from the duty code: "DO", "AL", the sick leave
+   "SL" and the day off requested "DO-R" are days off, a standby code (H04, H14) is a standby,
+   anything else is
    a flight. */
 /* A card can hold more than one sector: "HB 702 → HB 703". The kind is taken
    from the first code that means something. */
@@ -1381,11 +1385,11 @@ function dutyCodes(code){
 }
 
 /* The codes that are a day off: a day off, a day off requested (DO-R, written
-   DOR on some sheets) and an annual leave. They all count as days off and
-   behave exactly the same. */
+   DOR on some sheets), an annual leave and a sick leave. They all count as
+   days off and behave exactly the same. */
 function isDayOffCode(code){
   const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
-  return s === "DO" || s === "AL" || s === "DO-R" || s === "DOR";
+  return s === "DO" || s === "AL" || s === "DO-R" || s === "DOR" || s === "SL";
 }
 
 /* The duty cards of a crew member are listed from the oldest date. A card that
@@ -1443,6 +1447,7 @@ function isDoDay(d){
   if(!d) return false;
   const s = String(d.flight || "").trim().toUpperCase().replace(/\s+/g, "");
   if(s === "AL") return false;              /* an annual leave is not a DO */
+  if(s === "SL") return false;              /* a sick leave is not a DO */
   if(d.type === "DO") return true;
   return s === "DO" || s === "DO-R" || s === "DOR";
 }
@@ -1505,7 +1510,7 @@ function isNoTimeCode(code){
      flight   — a flight number (HB 702)
      standby  — a standby code (H04, H14)
      other    — another ground duty (A, GD)
-     off      - a day off, a day off requested or a leave (DO, DO-R, AL)
+     off      - a day off, a day off requested or a leave (DO, DO-R, AL, SL)
      notime   — a duty with no duty times (DUTY, NDA, NB) */
 function dutyKindFromCode(code){
   const codes = dutyCodes(code);
@@ -1717,6 +1722,7 @@ function rosterCounts(crews){
 /* The duty codes that cannot be swapped while their rule is on, with the note
    that says why the tick is locked:
      • AL  — annual leave, not a duty day
+     • SL  — sick leave, not a duty day
      • NB / NDA — carry no duty, the crew member is not rostered to work them
      • A / GD — ground duties that cannot be swapped */
 function unswapableCodes(code){
@@ -1725,6 +1731,8 @@ function unswapableCodes(code){
     const s = c.trim().toUpperCase();
     if(s === "AL" && ruleOn("noAnnualLeaveSwap")){
       out.push({ code:s, label:"Annual Leave (AL)", note:"Annual leave — not swappable" });
+    } else if(s === "SL" && ruleOn("noSickLeaveSwap")){
+      out.push({ code:s, label:"Sick Leave (SL)", note:"Sick leave — not swappable" });
     } else if((s === "NB" || s === "NDA") && ruleOn("noNbNdaSwap")){
       out.push({ code:s, label:(s === "NB" ? "NB" : "NDA") + " (no duty assignment)", note:"No duty assignment — not swappable" });
     } else if(s === "A" && ruleOn("noNbNdaSwap")){
@@ -2325,7 +2333,7 @@ function validate(data){
        that carries no duty at all (NB, NDA), or a duty A. The check looks at
        the code on the card, so it flags the leave or the assignment, not the
        days off that can be swapped. */
-    if(ruleOn("noAnnualLeaveSwap") || ruleOn("noNbNdaSwap")){
+    if(ruleOn("noAnnualLeaveSwap") || ruleOn("noSickLeaveSwap") || ruleOn("noNbNdaSwap")){
       duties.forEach(d => {
         unswapableCodes(d.flight).forEach(hit => {
           issues.push({ ok:false, who, text:who+": "+fmtDate(d.date)+" is "+hit.label+", which cannot be swapped." });
@@ -2823,7 +2831,7 @@ function renderRules(){
       saveRules();
       updateHint();
       /* the locks follow the rules, so the duty days are re-checked */
-      if(r.id === "noAnnualLeaveSwap" || r.id === "noNbNdaSwap") refreshSwapLocks();
+      if(r.id === "noAnnualLeaveSwap" || r.id === "noSickLeaveSwap" || r.id === "noNbNdaSwap") refreshSwapLocks();
     });
     if(valEl){
       valEl.addEventListener("change", () => {
@@ -3363,7 +3371,7 @@ function pdfCellsToRow(cells){
   /* The roster prints three kinds of duty line:
        OP - (...)   a flight, identified by Flight No
        STB - H04    standby, no flight number; STD..STA is the duty window
-       DO / AL      a day off or leave; the 00:00..23:59 times are placeholders
+       DO / AL / SL a day off or leave; the 00:00..23:59 times are placeholders
      The Excel sheet names the duty after the flight number, or after the
      code in the type column ("STB - H04" -> "H04"). */
   const flightNo = raw(cells.flight).toUpperCase();
@@ -3375,7 +3383,7 @@ function pdfCellsToRow(cells){
     duty = dash !== -1 ? typeText.slice(dash + 3).trim() : typeText;
   }
 
-  const isDO = isDayOffCode(flightNo) || isDayOffCode(duty) || /^DO\b/.test(typeText);
+  const isDO = isDayOffCode(flightNo) || isDayOffCode(duty) || isDayOffCode(typeText) || /^DO\b/.test(typeText);
   const isAL = /^AL\b/.test(typeText);
   const isAllDay = isDO || isAL;          /* no real duty times */
   /* A duty with no times at all: a general duty, a no-duty assignment or a
@@ -4024,6 +4032,7 @@ function totalBlockHours(records){
 function rosterDayOffKind(duty){
   const s = String(duty || "").trim().toUpperCase();
   if(/^AL(\s|$)/.test(s)) return "al";
+  if(/^SL(\s|$)/.test(s)) return "sl";
   if(/^DO-R(\s|$)/.test(s)) return "dor";
   if(/^DO(\s|$)/.test(s)) return "do";
   return "";
@@ -4108,7 +4117,7 @@ async function exportRosterPdf(records, opts){
      then the days off by code, so the PDF and the app always agree. */
   const tally = rosterTally(records);
   const tallyParts = [tally.duty + " duty day(s)"];
-  if(tally.hasOff) tallyParts.push(tally.do + " DO", tally.dor + " DO-R", tally.al + " AL");
+  if(tally.hasOff) tallyParts.push(tally.do + " DO", tally.dor + " DO-R", tally.al + " AL", tally.sl + " SL");
   const tallyText = tallyParts.join(" · ");
 
   const tallyH = 7.5;
@@ -4420,7 +4429,7 @@ function currentRosterRecords(){
 /* How many days off the roster holds, by code: a day off, the day off requested
    DO-R and an annual leave. Each one is a day of its own on the roster. */
 function countRosterDayOffs(records){
-  const out = { do:0, dor:0, al:0 };
+  const out = { do:0, dor:0, al:0, sl:0 };
   (records || []).forEach(rec => {
     const kind = rosterDayOffKind(rec.duty);
     if(kind) out[kind]++;
@@ -4428,7 +4437,7 @@ function countRosterDayOffs(records){
   return out;
 }
 
-/* The tally of a roster — the duty days, then the days off by code — is used
+/* The tally of a roster - the duty days, then the days off by code - is used
    both under the crew name field and at the head of the exported PDF, so the
    two can never disagree. */
 function rosterTally(records){
@@ -4438,7 +4447,8 @@ function rosterTally(records){
     do: off.do,
     dor: off.dor,
     al: off.al,
-    hasOff: off.do + off.dor + off.al > 0
+    sl: off.sl,
+    hasOff: off.do + off.dor + off.al + off.sl > 0
   };
 }
 
@@ -4480,7 +4490,7 @@ function renderRosterPreview(records){
      off by code */
   const tally = rosterTally(records);
   const offText = tally.hasOff
-    ? " · <b>" + tally.do + "</b> DO · <b>" + tally.dor + "</b> DO-R · <b>" + tally.al + "</b> AL"
+    ? " · <b>" + tally.do + "</b> DO · <b>" + tally.dor + "</b> DO-R · <b>" + tally.al + "</b> AL · <b>" + tally.sl + "</b> SL"
     : "";
   document.getElementById("roster-pdf-count").innerHTML =
     "<b>" + tally.duty + "</b> duty day(s)" + offText;
