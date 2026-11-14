@@ -305,6 +305,11 @@
 
   /* ---------- crew cards ---------- */
   .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+  /* when the header runs out of room the count and the button move to their
+     own line, and they stay at the right end of it */
+  .hist-head > span:last-child{margin-left:auto}
+  /* the button keeps its words on one line, whatever the panel is wide */
+  .hist-head .sel-all{white-space:nowrap;flex:0 0 auto}
   .row-head{flex-wrap:wrap;gap:8px}
   .hist-head span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 
@@ -518,8 +523,6 @@
     .brand-logo{width:62px;height:44px}
   }
   @media (max-width:900px){
-    /* the two crew members stack */
-    #parties{grid-template-columns:1fr}
     /* the roster rows become a labelled form instead of a wide table; the
        date and the duty share the first line, the sector takes a line of its
        own, and the figures pair underneath */
@@ -579,6 +582,64 @@
     .btn-mini{min-height:36px}
     nav button{min-height:44px}
     .duty-card input,.duty-card select{height:42px}
+    /* A duty day becomes a form, the way it is on a phone: the date strip with
+       the remove button on the first line and the card underneath it. A panel
+       that is half a tablet wide - iPad mini and the other small tablets keep
+       the two crew members side by side - still gives every box its room. */
+    .duty-day{
+      position:relative;display:grid;grid-template-columns:40px 1fr;
+      grid-template-areas:"tick date" "card card";gap:8px 8px;
+    }
+    .duty-check{grid-area:tick;justify-content:center}
+    .duty-check input{width:22px;height:22px}
+    .duty-date{
+      grid-area:date;flex-direction:row;justify-content:flex-start;align-items:center;
+      gap:8px;padding:6px 46px 6px 10px;min-height:44px;
+    }
+    /* the card uses two sizes: the duty code (which can hold a whole chain,
+       "HB 702 → HB 703") and the sector are text and take a whole line, the
+       two times are short and pair up at half a line */
+    .duty-card{grid-area:card;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+    .duty-card .f-duty,
+    .duty-day.multi .duty-card .f-duty{grid-column:1/-1;grid-row:auto}
+    .duty-card .f-sector,
+    .duty-day.multi .duty-card .f-sector{grid-column:1/-1;grid-row:auto}
+    .duty-card .f-start,
+    .duty-day.multi .duty-card .f-start{grid-column:1;grid-row:auto}
+    .duty-card .f-end,
+    .duty-day.multi .duty-card .f-end{grid-column:2;grid-row:auto}
+    /* a day off shows the one code in the same full-width box as every other
+       duty code — it used to be a narrow box of its own */
+    .duty-day.compact .duty-card input{width:100%}
+    /* every box in the card is the same height as the date strip above it, so
+       the card is a grid of equal rows */
+    .duty-card input,.duty-card select{height:44px;min-height:44px}
+    /* the value sits in the middle of its box; the labels above stay at the
+       left edge, so they still read as labels and the card stays balanced */
+    .duty-card input{text-align:center}
+    .duty-card input[type="time"]::-webkit-date-and-time-value{text-align:center}
+    /* the remove button sits at the right end of the date strip, so it never
+       takes a line of its own and stays a full-size tap target */
+    .duty-card .row-del{
+      position:absolute;top:0;right:0;width:44px;height:44px;
+      display:flex;align-items:center;justify-content:center;padding:0;
+      font-size:22px;border-radius:10px;
+    }
+  }
+  @media (max-width:700px){
+    /* a phone is too narrow for two crew members side by side */
+    #parties{grid-template-columns:1fr}
+  }
+  @media (min-width:701px) and (max-width:900px){
+    /* the two crew members sit side by side on a tablet, so each panel is
+       narrow: the body gives the cards a little less padding and the panel
+       buttons take a line of their own */
+    .party-body{padding:12px 8px}
+    .party-ctl{flex-direction:column;align-items:stretch}
+    .party-ctl .btn{width:100%}
+    /* the name field is a field, not a box to fill: without this the row it
+       sits in would stretch it to its flex basis, 150px tall */
+    .party-head .c-name{width:100%;flex:none}
   }
   @media (min-width:561px) and (max-width:900px){
     /* a tablet has room for three fields across */
@@ -625,6 +686,13 @@
     .rule-card .rule-line .val input,
     #filter-text,#filter-result,
     label.field input,label.field select,label.field textarea{font-size:16px}
+    /* the roster rows keep their table shape on a wide tablet, but the boxes
+       still have to be big enough to tap and big enough for iOS not to zoom
+       the page when one of them is focused */
+    .ocr-row input,.ocr-row select{font-size:16px;min-height:42px;min-width:0}
+    .ocr-row-extra input{font-size:16px;min-height:40px}
+    /* the remove button in a duty card is a real button on a touch screen */
+    .duty-card .row-del{min-width:40px;min-height:40px;padding:0}
     /* the app's own date and time text is as large as the other fields */
     .field-own .field-text{font-size:16px}
     .party-head .c-name,#filter-text,#filter-result{min-height:42px}
@@ -669,6 +737,11 @@
       display:flex;align-items:center;justify-content:center;
     }
   }
+  @media (min-width:901px) and (pointer:coarse){
+    /* on a wide tablet the duty card keeps the remove button in a column of its
+       own, and that column is a whole tap target wide */
+    .duty-card{grid-template-columns:1fr 1fr 40px}
+  }
   @media (max-width:560px){
     .grid-3{grid-template-columns:1fr}
     /* the date takes the same column as the duty start and every other field,
@@ -687,46 +760,6 @@
     /* the app's own date and time text sits in the middle of its box, like
        the value it stands for */
     .ocr-row .field-own .field-text{justify-content:center}
-    /* the card uses two sizes: the duty code (which can hold a whole chain,
-       "HB 702 → HB 703") and the sector are text and take a whole line, the
-       two times are short and pair up at half a line */
-    .duty-card{grid-area:card;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
-    .duty-card .f-duty,
-    .duty-day.multi .duty-card .f-duty{grid-column:1/-1;grid-row:auto}
-    .duty-card .f-sector,
-    .duty-day.multi .duty-card .f-sector{grid-column:1/-1;grid-row:auto}
-    .duty-card .f-start,
-    .duty-day.multi .duty-card .f-start{grid-column:1;grid-row:auto}
-    .duty-card .f-end,
-    .duty-day.multi .duty-card .f-end{grid-column:2;grid-row:auto}
-    /* a day off shows the one code in the same full-width box as every other
-       duty code — it used to be a narrow box of its own */
-    .duty-day.compact .duty-card input{width:100%}
-    /* the date becomes a strip above the card, with the remove button at its
-       right end so it no longer takes a line of its own */
-    .duty-day{
-      position:relative;display:grid;grid-template-columns:40px 1fr;
-      grid-template-areas:"tick date" "card card";gap:8px 8px;
-    }
-    .duty-check{grid-area:tick;justify-content:center}
-    .duty-check input{width:22px;height:22px}
-    .duty-date{
-      grid-area:date;flex-direction:row;justify-content:flex-start;align-items:center;
-      gap:8px;padding:6px 46px 6px 10px;min-height:44px;
-    }
-    /* every box in the card is the same height as the date strip above it, so
-       the card is a grid of equal rows — this holds in a narrow desktop window
-       too, where the pointer is not coarse */
-    .duty-card input,.duty-card select{height:44px;min-height:44px}
-    /* the value sits in the middle of its box; the labels above stay at the
-       left edge, so they still read as labels and the card stays balanced */
-    .duty-card input{text-align:center}
-    .duty-card input[type="time"]::-webkit-date-and-time-value{text-align:center}
-    .duty-card .row-del{
-      position:absolute;top:0;right:0;width:44px;height:44px;
-      display:flex;align-items:center;justify-content:center;padding:0;
-      font-size:22px;border-radius:10px;
-    }
     /* the small screens get the roster editor, not a paragraph of instructions */
     .row-head .hint{display:none}
     /* the tallies stay: how many rows were read and how many days off the

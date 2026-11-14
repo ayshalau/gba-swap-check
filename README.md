@@ -320,11 +320,17 @@ every record out.
 The app is built to work on a phone as well as a desktop, and is installable:
 
 - The two crew members sit side by side as columns on a wide screen and stack on a narrow one.
+  They stay side by side **down to 700px**, so an iPad mini (744px in portrait) shows both crew
+  members and their duty days next to each other. Below 700px — a phone — they stack.
 - On a **computer screen** a duty card is a stack: the **duty code on the first line, the sector
   on the second, and the two duty times side by side on the third**. A standby has no sector, so
   its card is the duty code on the first line and **Standby Start with Standby End** on the
   second. A day off is the duty code alone. A phone uses the same stack, with the date strip
   above it.
+- A panel that is half a tablet wide — the side-by-side crew members on an iPad mini or an iPad
+  in portrait — cannot hold that stack, so **900px down every duty day becomes a form**: the date
+  strip with the remove button on the first line and the card under it. It is the phone layout in
+  a narrow column, and every box still gets its room.
 - The roster rows are a wide table on a desktop and become a **labelled form** on a narrow one —
   each field carries its own name, so nothing is left to guess. Every field is either **half a
   line** or **a whole line**: a short field (the date, the duty code, a time, the period, the
@@ -361,7 +367,9 @@ The app is built to work on a phone as well as a desktop, and is installable:
 - Fields are **16px** on a narrow screen so iOS does not zoom the page when one is focused, and
   buttons and the duty-day tick are at least 44px so they are easy to hit. The same rules apply to
   **any touch screen** (`pointer: coarse`), so a phone turned sideways keeps the large type and
-  the big tap targets as well.
+  the big tap targets as well, and so does an **iPad in landscape**: the roster rows keep their
+  table shape there, but their boxes are still 16px and at least 42px tall, and the remove button
+  in a duty card is a 40px tap target.
 - Every input on a phone has one of only **two widths**: **half a line** (the date, the duty code,
   the times, the period, the block, a rule threshold) or **a whole line** (the sector, the crew
   name, the records filter and search, the PDF crew name). The duty card follows the same rule —
@@ -372,9 +380,10 @@ The app is built to work on a phone as well as a desktop, and is installable:
   never stretches the page sideways.
 - The four tabs fit on one line down to 320px instead of clipping the last word.
 - The roster preview stays a table and scrolls sideways, because the numbers need the columns.
-- Everything is checked at 1024px, 900px, 768px, 560px, 440px (iPhone 16 Pro Max), 430px, 402px,
-  390px, 375px, 360px and 320px, in all four views: no sideways scrolling of the page, no field
-  under 16px and nothing cut off inside a box.
+- Everything is checked at 1180px, 1133px (iPad mini landscape), 1024px, 900px, 834px, 820px,
+  768px, 744px (iPad mini portrait), 700px, 667px, 640px, 560px, 440px (iPhone 16 Pro Max), 430px,
+  402px, 390px, 375px, 360px and 320px, in all four views and with an iPad user agent: no
+  sideways scrolling of the page, no field under 16px and nothing cut off inside a box.
 
 ## Saving the roster as PDF
 
