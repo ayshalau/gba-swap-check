@@ -1,4 +1,4 @@
-const CACHE = "gba-swap-check-v111";
+const CACHE = "gba-swap-check-v112";
 const ASSETS = [
   "./",
   "index.html",
@@ -7,7 +7,12 @@ const ASSETS = [
   "icon-192.png",
   "icon-512.png",
   "icon-maskable-512.png",
-  "apple-touch-icon.png"
+  "apple-touch-icon.png",
+  /* the PDF reader and the PDF writer are kept with the app, so a roster can
+     be read and a roster can be exported with no connection at all */
+  "vendor/pdf.min.js",
+  "vendor/pdf.worker.min.js",
+  "vendor/jspdf.umd.min.js"
 ];
 
 self.addEventListener("install", (e) => {
@@ -45,8 +50,13 @@ self.addEventListener("fetch", (e) => {
           if (resp && resp.ok && resp.type === "basic") {
             const copy = resp.clone();
             caches.open(CACHE).then((cache) => cache.put("./", copy));
+            return resp;
           }
-          return resp;
+          /* a proxy answered with an error page - the cached app is better
+             than that, so it is served instead */
+          return caches.match("./")
+            .then((r) => r || caches.match("index.html"))
+            .then((cached) => cached || resp);
         })
         .catch(() => caches.match("./").then((r) => r || caches.match("index.html")))
     );

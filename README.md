@@ -30,6 +30,10 @@ the exports like any other row. **Clear** empties the whole editor again.
 A text-based PDF (exported from Excel or another app) is read with pdf.js:
 
 - The text and its position are pulled from every page.
+- The app is **offline-first**: everything works with no connection at all — the roster is
+  read in the browser, the swap is checked, and the roster is exported as a PDF. The PDF
+  reader and writer are kept with the app (`vendor/`) and cached by the service worker,
+  so nothing is downloaded from a CDN while you are offline.
 - Text items are grouped into printed rows by their vertical position.
 - The header row is found by matching column names.
 - Every printed heading becomes a column, including ones the sheet does not use
@@ -656,16 +660,42 @@ four sizes.
 
 ### Updates and the offline cache
 
-The service worker keeps the app working with no connection, but it must never
-pin an old release:
+The app is **offline-first**: it does everything — reading a roster PDF, checking a swap,
+exporting a roster as PDF — with no connection at all.
 
 - **The page** is fetched from the network first. Online, a new release appears on
   the next load; offline, the cached copy is used.
+- **A proxy error page** (a 502 from a hotel or airport wi-fi, for instance) is not shown:
+  the cached app is served instead.
 - **The install step** fetches each file with `cache: "reload"`, which skips the
   browser's HTTP cache, so a new version cannot be installed with a stale copy.
 - **Every other file** is served from the cache immediately.
 - Bump `CACHE` in `sw.js` (`gba-swap-check-vNN`) on each release so the old cache
   is dropped when the new worker activates.
+
+#### The PDF reader and writer are kept with the app
+
+The PDF engine used to come from a CDN, which meant a roster could only be read
+while online. Both libraries now live in `vendor/` and are cached by the service
+worker, so a roster can be read and a roster can be exported with no connection at
+all. The CDN copies are only a fallback for a deployment that is missing the folder.
+
+| File | Library | Licence |
+|---|---|---|
+| `vendor/pdf.min.js`, `vendor/pdf.worker.min.js` | pdf.js 3.11.174 | Apache-2.0 |
+| `vendor/jspdf.umd.min.js` | jsPDF 2.5.2 | MIT |
+
+The worker is kept with the reader, because pdf.js needs the worker to be the same
+build as the reader.
+
+#### What is stored where
+
+- The **app itself** (the page, the icons, the manifest and the two PDF libraries) is
+  in the service worker's cache — about 2 MB.
+- The **records** and the **rule settings** are in `localStorage` on the device.
+- The **roster PDF** is read in the browser and never uploaded; if it has been fetched
+  while online, the service worker keeps that copy too, so it can be read again
+  offline.
 
 ## Data
 

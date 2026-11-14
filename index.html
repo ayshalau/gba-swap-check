@@ -3168,6 +3168,11 @@ document.getElementById("export-records").addEventListener("click", () => {
 /* ============================================================
    ROSTER IMPORT — PDF TABLE PARSER
    ============================================================ */
+/* The PDF reader and the PDF writer are kept with the app, so a roster can be
+   read and a roster can be exported with no connection at all. The copies on
+   the CDN are only a fallback for a deployment that is missing the vendor
+   folder. */
+const VENDOR = "vendor/";
 const JSPDF_CDN = "https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js";
 const PDFJS_CDN = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
 const PDFJS_WORKER_CDN = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
@@ -3194,21 +3199,38 @@ const ROSTER_COLUMNS = [
 
 let ocrRows = [];          /* parsed duty-day rows */
 
+/* ---- load a script, the copy with the app first ---- */
+function loadScriptFile(urls, what){
+  return new Promise((resolve, reject) => {
+    let i = 0;
+    const next = () => {
+      if(i >= urls.length){
+        reject(new Error("Could not load " + what + ". Try again when the app is open online."));
+        return;
+      }
+      const url = urls[i++];
+      const s = document.createElement("script");
+      s.src = url;
+      s.async = true;
+      s.onload = () => resolve(url);
+      s.onerror = next;
+      document.head.appendChild(s);
+    };
+    next();
+  });
+}
+
 /* ---- load jsPDF on demand ---- */
 let jspdfPromise = null;
 function loadJsPdf(){
   if(window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
   if(jspdfPromise) return jspdfPromise;
-  jspdfPromise = new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = JSPDF_CDN;
-    s.async = true;
-    s.onload = () => (window.jspdf && window.jspdf.jsPDF)
-      ? resolve(window.jspdf.jsPDF)
-      : reject(new Error("PDF engine failed to initialise"));
-    s.onerror = () => reject(new Error("Could not download the PDF engine. Check your internet connection."));
-    document.head.appendChild(s);
-  });
+  jspdfPromise = loadScriptFile([VENDOR + "jspdf.umd.min.js", JSPDF_CDN], "the PDF writer")
+    .then(() => {
+      if(!(window.jspdf && window.jspdf.jsPDF)) throw new Error("The PDF writer failed to start.");
+      return window.jspdf.jsPDF;
+    })
+    .catch(err => { jspdfPromise = null; throw err; });
   return jspdfPromise;
 }
 
@@ -3217,18 +3239,17 @@ let pdfjsPromise = null;
 function loadPdfJs(){
   if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
   if(pdfjsPromise) return pdfjsPromise;
-  pdfjsPromise = new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = PDFJS_CDN;
-    s.async = true;
-    s.onload = () => {
-      if(!window.pdfjsLib){ reject(new Error("PDF reader failed to initialise")); return; }
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_CDN;
-      resolve(window.pdfjsLib);
-    };
-    s.onerror = () => reject(new Error("Could not download the PDF reader. Check your internet connection."));
-    document.head.appendChild(s);
-  });
+  pdfjsPromise = loadScriptFile([VENDOR + "pdf.min.js", PDFJS_CDN], "the PDF reader")
+    .then((src) => {
+      if(!window.pdfjsLib) throw new Error("The PDF reader failed to start.");
+      /* the worker is kept with the app too, so the reader works offline. It
+         has to be the same build as the reader, so it follows where the
+         reader came from. */
+      const worker = src.indexOf(VENDOR) === 0 ? VENDOR + "pdf.worker.min.js" : PDFJS_WORKER_CDN;
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = worker;
+      return window.pdfjsLib;
+    })
+    .catch(err => { pdfjsPromise = null; throw err; });
   return pdfjsPromise;
 }
 
