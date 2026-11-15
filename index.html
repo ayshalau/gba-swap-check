@@ -176,13 +176,15 @@
     color:var(--muted);font-weight:600;
   }
   .party-total .figs{text-align:right}
-  .party-total .val{
+  .party-total .val, .party-total .val-duty{
     font-size:16px;font-weight:700;color:var(--gold-soft);
     font-variant-numeric:tabular-nums;
   }
-  /* the block hours the crew member holds after the swap */
-  .party-total .val-after{color:#3B01CB}
-  .party-total .sub{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  /* the block hours and the duty hours the crew member holds after the swap */
+  .party-total .val-after, .party-total .val-duty-after{color:#3B01CB}
+  .party-total .sub, .party-total .sub-duty{
+    font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;
+  }
   /* the crew member name field */
   .party-head .c-name{
     background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);
@@ -1625,42 +1627,74 @@ function updateSelCount(crewEl){
   updatePartyTotal(crewEl);
 }
 
-/* The block hours of one crew member: every duty card added up, and the part
-   of that total on the days that are ticked for the swap. */
-function partyBlockTotals(crewEl){
+/* The block hours on one duty card, in minutes. */
+function blockMinutesOf(el){
+  const b = parseFloat(el.dataset.block || "");
+  return (isFinite(b) && b > 0) ? Math.round(b * 60) : 0;
+}
+
+/* The duty hours on one duty card, in minutes: the time from Duty Start to the
+   first departure, plus the time on the ground between one sector's arrival and
+   the next sector's departure. A card typed by hand carries no sector times, so
+   the whole duty window is counted for it. */
+function dutyMinutesOf(el){
+  const start = el.querySelector(".d-start").value;
+  const legs = (el.dataset.legs || "").split(";")
+    .map(p => p.split("-"))
+    .filter(p => p[0] && p[1]);
+  if(!legs.length){
+    const end = el.querySelector(".d-end").value;
+    return (start && end) ? (minutesApart(start, end) || 0) : 0;
+  }
+  let mins = 0;
+  const report = start ? minutesApart(start, legs[0][0]) : null;
+  if(report !== null) mins += report;
+  for(let i = 1; i < legs.length; i++){
+    const turn = minutesApart(legs[i-1][1], legs[i][0]);
+    if(turn !== null) mins += turn;
+  }
+  return mins;
+}
+
+/* One figure added up across a crew member's duty cards: the whole list, and
+   the part of that total on the days that are ticked for the swap. */
+function partyTotals(crewEl, measure){
   let allMins = 0, selMins = 0;
   [...crewEl.querySelectorAll(".duty-day")].forEach(el => {
-    const b = parseFloat(el.dataset.block || "");
-    if(!isFinite(b) || b <= 0) return;
-    const mins = Math.round(b * 60);
+    const mins = measure(el);
+    if(!mins) return;
     allMins += mins;
     if(el.dataset.selected !== "0") selMins += mins;
   });
   return { all: allMins, sel: selMins };
 }
 
-/* The block hours a crew member holds after the swap: the days that are not
-   swapped away stay, and the days swapped away come back as the other crew
-   member's duty. */
-function partyBlockAfterSwap(crewEl){
-  const t = partyBlockTotals(crewEl);
-  /* the block hours the other crew member gives up, and this one takes in */
+/* The figure a crew member holds after the swap: the days that are not swapped
+   away stay, and the days swapped away come back as the other crew member's
+   duty. */
+function partyAfterSwap(crewEl, measure){
+  const t = partyTotals(crewEl, measure);
+  /* the figure the other crew member gives up, and this one takes in */
   let inMins = 0;
   [...document.querySelectorAll("#parties .party")].forEach(other => {
     if(other === crewEl) return;
     other.querySelectorAll(".duty-day").forEach(el => {
       if(el.dataset.selected === "0") return;
-      const b = parseFloat(el.dataset.block || "");
-      if(!isFinite(b) || b <= 0) return;
-      inMins += Math.round(b * 60);
+      inMins += measure(el);
     });
   });
   return t.all - t.sel + inMins;
 }
 
+function partyBlockTotals(crewEl){ return partyTotals(crewEl, blockMinutesOf); }
+function partyBlockAfterSwap(crewEl){ return partyAfterSwap(crewEl, blockMinutesOf); }
+function partyDutyTotals(crewEl){ return partyTotals(crewEl, dutyMinutesOf); }
+function partyDutyAfterSwap(crewEl){ return partyAfterSwap(crewEl, dutyMinutesOf); }
+
 /* Show the crew member's block-hour total under their duty cards, and the
    figure they will hold after the swap. When some days are left out of the
-   swap, the ticked figure is shown beside the total. */
+   swap, the ticked figure is shown beside the total. The duty hours are shown
+   the same way under them. */
 function updatePartyTotal(crewEl){
   if(!crewEl) return;
   const box = crewEl.querySelector(".party-total");
@@ -1673,6 +1707,18 @@ function updatePartyTotal(crewEl){
   const differs = t.sel !== t.all;
   sub.textContent = differs ? " · " + rosterDuration(t.sel) + " selected" : "";
   sub.hidden = !differs;
+
+  const d = partyDutyTotals(crewEl);
+  const dVal = box.querySelector(".val-duty");
+  if(dVal) dVal.textContent = rosterDuration(d.all);
+  const dAfter = box.querySelector(".val-duty-after");
+  if(dAfter) dAfter.textContent = rosterDuration(partyDutyAfterSwap(crewEl));
+  const dSub = box.querySelector(".sub-duty");
+  if(dSub){
+    const dDiffers = d.sel !== d.all;
+    dSub.textContent = dDiffers ? " · " + rosterDuration(d.sel) + " selected" : "";
+    dSub.hidden = !dDiffers;
+  }
 }
 
 /* The totals of every crew member, so a change on one side shows on the other
@@ -1945,6 +1991,12 @@ function addDutyDay(crewEl, data){
   /* the block hour is kept on the row — it comes from the roster and the
      block-hour rules need it, but it is no longer a column of its own */
   el.dataset.block = blockHoursForInput(d.block);
+  /* the sector times, so the duty hours can be worked out: the report time up
+     to the first departure, then one arrival to the next departure */
+  el.dataset.legs = (d.legs || [])
+    .filter(l => l && l.dep && l.arr)
+    .map(l => l.dep + "-" + l.arr)
+    .join(";");
   el.innerHTML =
     '<label class="duty-check" title="Include this duty day in the swap check">' +
       '<input type="checkbox" class="d-check"'+(d.selected === false ? "" : " checked")+'>' +
@@ -2141,6 +2193,14 @@ function addCrew(data){
           '<span class="lbl">After Swap</span>' +
           '<span class="figs"><b class="val val-after">0:00</b></span>' +
         '</div>' +
+        '<div class="trow">' +
+          '<span class="lbl">Total Duty Hours</span>' +
+          '<span class="figs"><b class="val-duty">0:00</b><span class="sub-duty"></span></span>' +
+        '</div>' +
+        '<div class="trow">' +
+          '<span class="lbl">After Swap</span>' +
+          '<span class="figs"><b class="val-duty val-duty-after">0:00</b></span>' +
+        '</div>' +
       '</div>' +
     '</div>';
 
@@ -2219,6 +2279,7 @@ function readCrew(){
         start: d.querySelector(".d-start").value,
         end: d.querySelector(".d-end").value,
         block: d.dataset.block || "",
+        legs: d.dataset.legs || "",
         flight: d.querySelector(".d-flight").value.trim(),
         sector: d.querySelector(".d-sector").value.trim(),
         selected: d.dataset.selected !== "0"
@@ -4894,6 +4955,12 @@ function combineDay(day){
     start: first.start || "",
     end: last.end || "",
     block: mins ? (mins/60).toFixed(2) : "",
+    /* each sector's own departure and arrival, so the duty hours of the day can
+       be worked out: the report time before the first departure, and the time
+       on the ground between the sectors */
+    legs: rows
+      .filter(r => r.dep && r.arr)
+      .map(r => ({ dep: r.dep, arr: r.arr })),
     flight: rows.map(r => r.flight || "").filter(Boolean).join(" → "),
     sector: rows.map(r => r.sector || "").filter(Boolean).join(" → ")
   };
