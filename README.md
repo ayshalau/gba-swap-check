@@ -192,15 +192,13 @@ Changing the **Dep Time** or the **Arr Time** of a row moves the fields that fol
 
 | Field | Follows |
 |---|---|
-| Duty Start | Dep Time − 65 min |
 | Duty End | Arr Time + 30 min |
 | Duty Period | Duty Start to Duty End |
 | Block Hour | Dep Time to Arr Time, less the clock difference between the two airports |
 
-The **Duty Start** is 65 minutes before the Dep Time, so **amending the Dep Time moves the duty
-start with it**: change the departure from 0915 to 1030 and the duty start moves from 0810 to
-0925. The same happens whichever way the time is typed — `1030` or `10:30`. Amending the
-**Arr Time** leaves the duty start where it is.
+The **Duty Start** is the crew's report time and is left where it is, so amending a flight
+time never moves it. The exception is a row added by hand with **Add Flight Duty**: its Duty
+Start was worked out from the Dep Time, so it follows the Dep Time until a start is typed.
 
 A **Duty End** or **Block Hour** typed by hand is kept as it is typed, and is not overwritten
 when a flight time is amended. A row whose block hour was printed by the roster keeps that
