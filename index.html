@@ -3940,13 +3940,24 @@ function renderOcrRows(){
     /* times are stored as HH:MM however they were typed */
     ["start","dep","arr","end"].forEach(k => {
       const field = main.querySelector(".o-" + k);
+      /* the value before it is changed, so a move can be spotted */
+      field.addEventListener("focus", () => { field.dataset.before = r[k] || ""; });
       field.addEventListener("blur", () => {
         const hm = digitsToHm(field.value);
+        /* the departure moved - the duty start moves with it. The times are
+           compared in their own format, so it makes no difference whether the
+           time was typed as "1030" or as "10:30". */
+        const before = field.dataset.before || "";
+        const depMoved = (k === "dep") && hm !== digitsToHm(before);
         r[k] = hm;
         field.value = hmToDigits(hm);
+        field.dataset.before = "";
 
-        /* a duty with no start yet takes it from the departure time */
-        if((r.startFollowsDep || !r.start) && r.dep){
+        /* The duty start is 65 minutes before the departure, so a new
+           departure time moves the duty start with it. A duty start typed by
+           hand is kept as it is typed, unless the departure is moved after
+           that. */
+        if(r.dep && (depMoved || r.startFollowsDep || !r.start)){
           const m = hmToMin(r.dep);
           if(m !== null) r.start = minToHm(m - 65);
         }
@@ -3978,9 +3989,9 @@ function updateOcrCount(){
      Duty End    = Arr Time + 30 min
      Duty Period = Duty Start to Duty End
      Block Hour  = Dep Time to Arr Time
-   Amending the Dep Time or the Arr Time moves all three. The Duty Start is the
-   crew's report time and is left where it is, unless it was worked out from the
-   departure time to begin with. A duty end or block hour typed by hand is kept. */
+   Amending the Dep Time or the Arr Time moves all three. The Duty Start is
+   65 minutes before the Dep Time, so a new departure time moves the duty start
+   with it. A duty end or block hour typed by hand is kept. */
 function refreshDerivedTimes(r, changed){
   const timeChanged = (changed === "dep" || changed === "arr");
   const sectorChanged = (changed === "sector");
