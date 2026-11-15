@@ -493,6 +493,10 @@ jsPDF:
 - **Total Block Hours** is shown in the last row of both the preview and the exported PDF:
   the Block Hour column is added up and printed in its own column. Non-flight duties have
   no block, so they do not change the total.
+- **Total Duty Hours** sits directly under it in both the preview and the PDF, added up the same
+  way as the swap check shows it: for each duty day, **Duty Start to the first departure**, plus
+  **one sector's arrival to the next sector's departure**. A two-sector day reported at 0810,
+  with 0915→1100 and 1230→1420, counts `1:05 + 1:30 = 2:35`.
 - The **duty day count** and the **days off by code** (`DO`, `DO-R`, `AL`, `SL`) are printed together
   as a tally under the crew name field and at the head of the exported PDF — for example
   *"15 duty day(s) · 8 DO · 0 DO-R · 7 AL"*, with an `SL` column added when the roster holds a

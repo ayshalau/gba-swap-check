@@ -461,6 +461,7 @@
     text-align:right;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
     color:var(--muted);font-weight:600;
   }
+  .roster-table tfoot tr + tr td{border-top:1px dashed var(--line)}
   .roster-table tfoot .total-value{color:var(--gold-soft);font-size:13px}
   /* the tally of the roster — the duty days and the days off by code — sits
      under the crew name field */
@@ -4291,6 +4292,37 @@ function totalBlockHours(records){
   return rosterDuration(mins);
 }
 
+/* The duty hours of a roster: for each duty day, the time from Duty Start to
+   the first departure, plus one sector's arrival to the next sector's
+   departure. Several rows sharing a date are the sectors of one duty day, so
+   only the first departure and the turns between the sectors are counted. */
+function totalDutyHours(records){
+  const rows = records || [];
+  let mins = 0;
+  let i = 0;
+  while(i < rows.length){
+    let j = i;
+    while(j + 1 < rows.length && rows[j + 1].date && rows[j + 1].date === rows[i].date) j++;
+    const group = rows.slice(i, j + 1);
+    const first = group[0];
+    const dep0 = first.depTime || "";
+    if(first.dutyStart && dep0){
+      const m = minutesApart(first.dutyStart, dep0);
+      if(m !== null) mins += m;
+    }
+    for(let k = 1; k < group.length; k++){
+      const arr = group[k - 1].arrTime || "";
+      const dep = group[k].depTime || "";
+      if(arr && dep){
+        const m = minutesApart(arr, dep);
+        if(m !== null) mins += m;
+      }
+    }
+    i = j + 1;
+  }
+  return rosterDuration(mins);
+}
+
 /* The days off in a roster record: a day off, a day off requested (DO-R) and
    an annual leave. Each one is a day of its own on the roster and counts as a
    day off, the same as the others. */
@@ -4400,7 +4432,7 @@ async function exportRosterPdf(records, opts){
      over. The footer keeps its own room at the bottom. */
   const footY = pageH - margin + 2;          /* the footer line */
   const tableBottom = footY - 3;              /* the table stops above it */
-  const tableRows = records.length + (records.length ? 1 : 0);   /* + totals row */
+  const tableRows = records.length + (records.length ? 2 : 0);   /* + the two totals rows */
   const bodySpace = tableBottom - (y + headH);
   const rowH = tableRows ? Math.max(3.4, Math.min(6.2, bodySpace / tableRows)) : 6.2;
   /* the text sits in the middle of its row, whatever the row height is */
@@ -4462,28 +4494,34 @@ async function exportRosterPdf(records, opts){
     y += rowH;
   });
 
-  /* ---- total block hours ---- */
+  /* ---- total block hours and total duty hours ---- */
   if(records.length){
-    if(y + rowH > tableBottom){
+    const blockColW = colW[colW.length - 1];
+    const labelW = availW - blockColW;
+    const totals = [
+      ["Total Block Hours", totalBlockHours(records)],
+      ["Total Duty Hours", totalDutyHours(records)]
+    ];
+    /* the two totals stay together, and start a new page if they do not fit */
+    if(y + rowH * totals.length > tableBottom){
       doc.addPage();
       y = margin;
       drawHead();
     }
-    const totalBlock = totalBlockHours(records);
-    const blockColW = colW[colW.length - 1];
-    const labelW = availW - blockColW;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
-    doc.setTextColor(23, 58, 63);
-    doc.setFillColor(240, 248, 249);
-    doc.setDrawColor(160, 195, 197);
-    doc.setLineWidth(0.25);
-    doc.rect(margin, y, labelW, rowH, "FD");
-    doc.rect(margin + labelW, y, blockColW, rowH, "FD");
-    doc.text("Total Block Hours", margin + labelW - 2, y + baseline, { align:"right" });
-    doc.setFontSize(8);
-    doc.text(totalBlock, margin + labelW + blockColW/2, y + baseline, { align:"center" });
-    y += rowH;
+    totals.forEach(([label, value]) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(23, 58, 63);
+      doc.setFillColor(240, 248, 249);
+      doc.setDrawColor(160, 195, 197);
+      doc.setLineWidth(0.25);
+      doc.rect(margin, y, labelW, rowH, "FD");
+      doc.rect(margin + labelW, y, blockColW, rowH, "FD");
+      doc.text(label, margin + labelW - 2, y + baseline, { align:"right" });
+      doc.setFontSize(8);
+      doc.text(value, margin + labelW + blockColW/2, y + baseline, { align:"center" });
+      y += rowH;
+    });
   }
 
   /* ---- footer ---- */
@@ -4755,11 +4793,17 @@ function renderRosterPreview(records){
     }).join("") + "</tr>";
   }).join("") + "</tbody>";
 
-  /* total block hours along the bottom, under its own column */
-  const foot = '<tfoot><tr>' +
-    '<td colspan="' + (ROSTER_COLUMNS.length - 1) + '" class="total-label">Total Block Hours</td>' +
-    '<td class="c mono total-value">' + esc(totalBlockHours(records)) + '</td>' +
-    '</tr></tfoot>';
+  /* total block hours along the bottom, under its own column, then the duty
+     hours under them */
+  const totalCell = (label, value) =>
+    '<tr>' +
+      '<td colspan="' + (ROSTER_COLUMNS.length - 1) + '" class="total-label">' + label + '</td>' +
+      '<td class="c mono total-value">' + esc(value) + '</td>' +
+    '</tr>';
+  const foot = '<tfoot>' +
+    totalCell("Total Block Hours", totalBlockHours(records)) +
+    totalCell("Total Duty Hours", totalDutyHours(records)) +
+    '</tfoot>';
 
   t.innerHTML = head + body + foot;
   /* the tally sits under the crew name field: the duty days, then the days
