@@ -349,15 +349,6 @@ the other crew member's duty. It is the figure the 50-hour minimum is judged aga
 moves as soon as a day is ticked or the other crew member's duty changes. Both figures follow
 the cards as they are typed, imported, ticked or removed.
 
-Under the block hours sit the **Total Duty Hours**, worked out card by card as the time from
-**Duty Start to the first departure**, plus **one sector's arrival to the next sector's
-departure** — the report time and the time on the ground between the sectors. A two-sector day
-with a report at 0810, departures at 0915 and 1230, and arrivals at 1100 and 1420 counts
-`1:05 + 1:30 = 2:35`. The figure is shown the same way as the block hours: the total, the
-ticked figure beside it (*"2:35 · 1:10 selected"*), and the **After Swap** duty hours under it
-in `#3B01CB`. A duty day typed by hand has no sector times, so its whole duty window (Duty
-Start to Duty End) is counted.
-
 The verdict lists every finding: a **✕** is a failed check and rejects the request, a **✓** is a
 check that passed, and a **⚠** is a warning — a note that does not reject the request on its own
 (the days off average is shown as a warning when the form does not yet hold the three 28-day
