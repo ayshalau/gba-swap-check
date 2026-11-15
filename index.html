@@ -1387,20 +1387,27 @@ function dutyCodes(code){
   return String(code || "").split(/→/).map(s => s.trim()).filter(Boolean);
 }
 
-/* The codes that are a day off: a day off, a day off requested (DO-R, written
-   DOR on some sheets), an annual leave and a sick leave. They all count as
-   days off and behave exactly the same. */
+/* A duty code that starts with DO is a day off: DO itself, the day off
+   requested (DO-R, written DOR on some sheets), DO-SH and anything else the
+   roster prints that way. */
+function isDoCode(code){
+  return String(code || "").trim().toUpperCase().replace(/\s+/g, "").indexOf("DO") === 0;
+}
+
+/* The codes that are a day off: a day off and anything that starts with it,
+   an annual leave and a sick leave. They all count as days off and behave
+   exactly the same. */
 function isDayOffCode(code){
   const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
-  return isRestDayCode(s) || s === "SL";
+  return isDoCode(s) || s === "AL" || s === "SL";
 }
 
 /* The rest days that count for the rules about the day after a day off: a day
-   off, a day off requested and an annual leave. A sick leave is a day off, but
-   it is not one of them. */
+   off (and every code that starts with it) and an annual leave. A sick leave
+   is a day off, but it is not one of them. */
 function isRestDayCode(code){
   const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
-  return s === "DO" || s === "AL" || s === "DO-R" || s === "DOR";
+  return isDoCode(s) || s === "AL";
 }
 
 /* The duty cards of a crew member are listed from the oldest date. A card that
@@ -1460,7 +1467,7 @@ function isDoDay(d){
   if(s === "AL") return false;              /* an annual leave is not a DO */
   if(s === "SL") return false;              /* a sick leave is not a DO */
   if(d.type === "DO") return true;
-  return s === "DO" || s === "DO-R" || s === "DOR";
+  return isDoCode(s);
 }
 
 /* The roster a crew member flies after the swap: every duty day on the form,
@@ -3836,7 +3843,7 @@ function renderOcrRows(){
 
     /* flag rows the reader could not read confidently */
     if(!r.date) main.querySelector(".o-date").classList.add("low");
-    if(!r.start && !r.end && r.flight && !/^DO$/i.test(r.flight.trim()))
+    if(!r.start && !r.end && r.flight && !/^DO/i.test(r.flight.trim()))
       main.querySelector(".o-start").classList.add("low");
 
     main.querySelector(".row-del").addEventListener("click", () => {
@@ -4135,7 +4142,7 @@ function normaliseDuration(v){
 /* Map a parsed OCR row onto a roster record */
 function ocrRowToRoster(r){
   const dutyVal = (r.flight || "").toUpperCase();
-  const isDO = dutyVal === "DO" || r.type === "DO";
+  const isDO = isDayOffCode(dutyVal) || r.type === "DO";
   const isStby = r.type === "Standby";
   const hasSector = !!r.sector;
   const hasDepArr = !!r.dep && !!r.arr;
@@ -4205,8 +4212,8 @@ function rosterDayOffKind(duty){
   const s = String(duty || "").trim().toUpperCase();
   if(/^AL(\s|$)/.test(s)) return "al";
   if(/^SL(\s|$)/.test(s)) return "sl";
-  if(/^DO-R(\s|$)/.test(s)) return "dor";
-  if(/^DO(\s|$)/.test(s)) return "do";
+  if(/^DO-?R(\s|$)/.test(s)) return "dor";     /* the day off requested */
+  if(/^DO/.test(s)) return "do";              /* any other day off code */
   return "";
 }
 
@@ -4459,7 +4466,7 @@ async function exportRosterPdf(records, opts){
 function combineDutyDays(rows){
   const has = (r, k) => Object.prototype.hasOwnProperty.call(r, k);
   const getDuty = (r) => String(has(r,"flight") ? r.flight : (r.duty || ""));
-  const isDO = (r) => /^DO(\s|$)/i.test(getDuty(r).trim());
+  const isDO = (r) => /^DO/i.test(getDuty(r).trim());
   const getS = (r) => has(r,"start") ? r.start : r.dutyStart;
   const getE = (r) => has(r,"end") ? r.end : r.dutyEnd;
   const setS = (r,v) => { if(has(r,"start")) r.start = v; else r.dutyStart = v; };

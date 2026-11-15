@@ -105,6 +105,12 @@ roster fields are filled from them like this:
   duty day, and it can be swapped like any other day off. Only the roster sheet keeps the
   printed code `DO-R`, so the requested day off is still recognisable, and the tally counts it
   in its own `DO-R` column.
+- **Any duty code that starts with `DO` is a day off** — `DO` itself, `DO-R`, `DOR`, `DO-SH`
+  and anything else the roster prints that way. They are all added to the request as a
+  **Day Off**, with no sector and no duty times, they are not duty days, they count towards the
+  days off entitlement, and they can be swapped like any other day off. The printed code is
+  kept on the card and in the export, so a `DO-SH` still reads `DO-SH`. The tally counts
+  `DO-R` (and `DOR`) in its own column and every other `DO…` code in the `DO` column.
 - The sick leave `SL` is a **day off** as well: it is added to the request as a **Day Off**, with
   no sector and no duty times, and it is not a duty day. Unlike `DO` and `DO-R` it **cannot be
   swapped** — see the rule *Sick Leave (SL) Cannot Be Swapped* — so its tick is locked and the
@@ -250,10 +256,10 @@ already holds replaces it, and the same goes for a duty day whose date is change
 another one holds: the newest wins and the older card is removed. The other crew member still
 carries that date, so the pairing follows whatever the new card is set to.
 
-There is no duty type column: the type follows the duty code — `DO`, `AL` and `SL` are days off, a
-standby code (`H04`, `H14`) is a standby, `DUTY`, `NDA`, `NB` and `DO-R` are duties with no
-times and anything else is a flight. The time labels follow the type ("Standby Start",
-"DO Starts").
+There is no duty type column: the type follows the duty code — every code that starts with `DO`,
+plus `AL` and `SL`, is a day off; a standby code (`H04`, `H14`) is a standby; `DUTY`, `NDA` and
+`NB` are duties with no times and anything else is a flight. The time labels follow the type
+("Standby Start", "DO Starts").
 
 Only a flight shows its full card. The fields a duty does not have are hidden and cleared, the
 way the crew roster app lists them:
@@ -263,8 +269,8 @@ way the crew roster app lists them:
 | `HB 702` (flight) | Duty, Sector, Duty Start, Duty End |
 | `H04`, `H14` (standby) | Duty, Standby Start, Standby End |
 | `A`, `GD` (other ground duty) | Duty, Duty Start, Duty End |
-| `DUTY`, `NDA`, `NB`, `DO-R` (duty with no times) | Duty |
-| `DO`, `AL`, `SL` (day off or leave) | Duty |
+| `DUTY`, `NDA`, `NB` (duty with no times) | Duty |
+| `DO`, `DO-R`, `DO-SH` (any `DO…` code), `AL`, `SL` (day off or leave) | Duty |
 
 A duty with no times, a day off or a leave shows only its duty code, so its duty field stays
 narrow while the card itself keeps the same size as the others. Every row is the same height, so
@@ -550,12 +556,13 @@ because neither of them can be swapped.
   least 24 hours.
 - The maximum number of consecutive DO allowed is **4**. The days off counted are the ones the
   crew member holds **after the swap** — the days off that are not swapped away, plus the days
-  off taken in from the other crew member. A day off requested (`DO-R`) counts as a DO here, so a
-  run of days off is measured across `DO` and `DO-R` alike. An annual leave (`AL`) and a sick
+  off taken in from the other crew member. Every code that starts with `DO` counts as a DO here
+  — `DO`, `DO-R` and `DO-SH` alike — so a run of days off is measured across all of them. An
+  annual leave (`AL`) and a sick
   leave (`SL`) are **not**
   counted as a DO in this rule.
 - A day off cannot be followed by duty earlier than 0600. The rule **Earliest Duty Start After DO /
-  DO-R / AL** applies to a `DO`, a day off requested (`DO-R`) and an annual leave (`AL`), and the
+  DO-R / AL** applies to every code that starts with `DO` and to an annual leave (`AL`), and the
   finding says which one it is about (*"earlier than the 06:00L minimum after an AL"*).
 - Duty end time is 30 minutes after STA / ATA or end of standby duty period.
 - Any swap resulting in a duty end beyond 2330L before a DO is not approved.
@@ -598,8 +605,9 @@ because neither of them can be swapped.
 - These are **roster rules**, so they are measured on every duty day on the form for that crew
   member, not only on the ticked days — a swap is judged against the days around it. A window is
   only looked at when the form holds a card for **every day in it**, so a form that is only partly
-  filled is never judged on it. **A day off, a day off requested (`DO-R`), an annual leave and a
-  sick leave all
+  filled is never judged on it. **Every day off — any code that starts with `DO`, a day off
+  requested (`DO-R`), an annual leave and a
+  sick leave — all
   count as a day off.**
 - The old **Maximum Consecutive Days Off (4)** rule was replaced by these four, and has since been
   added back in group 3 as **Maximum Number of Consecutive Days Off (DO)** — the longest run of
