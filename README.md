@@ -319,14 +319,20 @@ this way; it stays
 locked.
 
 **A layover is swapped together.** A duty that ends at an outport leaves the crew member
-there, so it has to travel with **the flight that brings them home** from that station. The app
-works the pair out from the sector: the duty that ends at an outport, and the next flight out
-of that station that ends at `HKG`. Ticking one of the two ticks the other, on both crew
-members, and unticking one unticks the other — so they are always swapped as one. A request
-that carries one of the two without the other is rejected:
+there, so it has to travel with **the flight that brings them home** from that station, and
+with **the layover day in between** — an `NDA-LAYOVER`, the day the crew member spends at the
+outport with no flying. The app works the group out from the sector: the duty that ends at an
+outport, the flight out of that station that ends at `HKG`, and any layover days in between.
+Ticking one of them ticks the others, on both crew members, and unticking one unticks the
+others — so they are always swapped as one. A request that carries only some of them is
+rejected:
 
-> *"Wong Ka Ming: the duty on 2026-11-18 ends at CTS, so it has to be swapped together with the
-> flight home on 2026-11-19. Tick both days or neither."*
+> *"Aysha: the duty on 2026-09-20 ends at URC, so it has to be swapped together with
+> 22-Sep-26, 23-Sep-26. Tick all of them or none."*
+
+An `NDA-LAYOVER` is **swappable** — it is the layover day, not a no-duty assignment, so the
+**NB / NDA / A / GD Cannot Be Swapped** rule does not cover it. A plain `NDA` still cannot be
+swapped.
 
 A same-day turnaround — `HB 702 HKG TPE` and `HB 703 TPE HKG` on the same day — is not a
 layover, so those days stay separate.
@@ -557,7 +563,8 @@ because neither of them can be swapped.
   either: they can neither be swapped out nor taken in place of a duty. While the rule is on, an
   NB, NDA, A or GD day cannot be ticked: the tick is locked and the card says "No duty
   assignment - not swappable" (or "Duty A - not swappable" / "Duty GD - not swappable"). The
-  check also rejects a request that carries one.
+  check also rejects a request that carries one. An `NDA-LAYOVER` is **not** covered: it is the
+  layover day at an outport, and it is swapped together with the flights around it.
 
 **3. Day Off (DO) and Standby Duty**
 - A single DO must include 2 local nights and be at least 34 hours. A local night is 8
