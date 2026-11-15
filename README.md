@@ -59,6 +59,13 @@ The GBA roster this is built for has these columns:
 - `TYPE OF DUTY` carries the duty code: `OP - (FA4)` for a flight, `STB - H04` for
   standby, `OTH - A` / `OTH - GD` for other duties, and `DO` / `AL` / `SL` for a day off or
   leave. The day off requested `DO-R` is read as a day off as well.
+- **A duty code is matched without its spaces and without any punctuation the sheet puts
+  after it**, so the code is recognised whatever the roster prints: `AL.` is an annual leave,
+  `HB 2346` and `HB2346` are the same flight, a standby may carry a letter (`H18R`), and an
+  `NDA` may carry a word (`NDA-LAYOVER`) — that is still an NDA, so it carries no duty and
+  cannot be swapped. The code that is printed is kept as it is on the card and in the export.
+- **A flight number may have any number of digits** — `HB 702`, `HB 2346`, `HB 8953` are
+  all read as flights, with their sector, times and block hours.
 - `S NO` and `REMARK` are ignored.
 
 If the PDF has no text layer (a scan), the reader says so — the PDF must contain

@@ -1387,18 +1387,26 @@ function dutyCodes(code){
   return String(code || "").split(/→/).map(s => s.trim()).filter(Boolean);
 }
 
+/* The duty code as a key: no spaces and no trailing punctuation. The roster
+   prints an annual leave as "AL." with a full stop, and the code has to be
+   recognised whatever the sheet puts after it. The code that is printed is
+   still kept as it is. */
+function dutyCodeKey(code){
+  return String(code || "").trim().toUpperCase().replace(/\s+/g, "").replace(/[.,:;]+$/, "");
+}
+
 /* A duty code that starts with DO is a day off: DO itself, the day off
    requested (DO-R, written DOR on some sheets), DO-SH and anything else the
    roster prints that way. */
 function isDoCode(code){
-  return String(code || "").trim().toUpperCase().replace(/\s+/g, "").indexOf("DO") === 0;
+  return dutyCodeKey(code).indexOf("DO") === 0;
 }
 
 /* The codes that are a day off: a day off and anything that starts with it,
    an annual leave and a sick leave. They all count as days off and behave
    exactly the same. */
 function isDayOffCode(code){
-  const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
+  const s = dutyCodeKey(code);
   return isDoCode(s) || s === "AL" || s === "SL";
 }
 
@@ -1406,7 +1414,7 @@ function isDayOffCode(code){
    off (and every code that starts with it) and an annual leave. A sick leave
    is a day off, but it is not one of them. */
 function isRestDayCode(code){
-  const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
+  const s = dutyCodeKey(code);
   return isDoCode(s) || s === "AL";
 }
 
@@ -1520,8 +1528,9 @@ function dutyTypeFromCode(code){
    no duty start and no duty end. The day off requested (DO-R) is a day off, so it is
    handled with the other days off and not here. */
 function isNoTimeCode(code){
-  const s = String(code || "").trim().toUpperCase().replace(/\s+/g, "");
-  return s === "DUTY" || s === "NDA" || s === "NB";
+  const s = dutyCodeKey(code);
+  /* the sheet may add a word to the code - "NDA-LAYOVER" is still an NDA */
+  return s.indexOf("DUTY") === 0 || s.indexOf("NDA") === 0 || s.indexOf("NB") === 0;
 }
 
 /* What kind of duty the code names:
@@ -1534,10 +1543,10 @@ function dutyKindFromCode(code){
   const codes = dutyCodes(code);
   if(!codes.length) return "flight";                 /* nothing typed yet */
   for(const c of codes){
-    const s = c.toUpperCase();
+    const s = dutyCodeKey(c);
     if(isDayOffCode(s)) return "off";
     if(isNoTimeCode(s)) return "notime";
-    if(/^H\d{2}$/.test(s)) return "standby";
+    if(/^H\d{2}[A-Z]?$/.test(s)) return "standby";
     if(/^(STB|STBY)/.test(s)) return "standby";
     if(looksLikeFlightNo(s)) return "flight";
   }
@@ -1746,13 +1755,13 @@ function rosterCounts(crews){
 function unswapableCodes(code){
   const out = [];
   dutyCodes(code).forEach(c => {
-    const s = c.trim().toUpperCase();
+    const s = dutyCodeKey(c);
     if(s === "AL" && ruleOn("noAnnualLeaveSwap")){
       out.push({ code:s, label:"Annual Leave (AL)", note:"Annual leave — not swappable" });
     } else if(s === "SL" && ruleOn("noSickLeaveSwap")){
       out.push({ code:s, label:"Sick Leave (SL)", note:"Sick leave — not swappable" });
-    } else if((s === "NB" || s === "NDA") && ruleOn("noNbNdaSwap")){
-      out.push({ code:s, label:(s === "NB" ? "NB" : "NDA") + " (no duty assignment)", note:"No duty assignment — not swappable" });
+    } else if((s.indexOf("NB") === 0 || s.indexOf("NDA") === 0) && ruleOn("noNbNdaSwap")){
+      out.push({ code:s, label:(s.indexOf("NB") === 0 ? "NB" : "NDA") + " (no duty assignment)", note:"No duty assignment — not swappable" });
     } else if(s === "A" && ruleOn("noNbNdaSwap")){
       out.push({ code:s, label:"Duty A", note:"Duty A — not swappable" });
     } else if(s === "GD" && ruleOn("noNbNdaSwap")){
@@ -3666,7 +3675,7 @@ function formatFlightNo(v){
    "3U8888". A standby or other duty code ("H04", "H14", "A", "GD") does not
    match, so it is not treated as a flight. */
 function looksLikeFlightNo(v){
-  const s = String(v || "").trim().toUpperCase();
+  const s = dutyCodeKey(v);
   return /^([A-Z]{2,4}|\d[A-Z])\s*\d{1,5}[A-Z]?$/.test(s);
 }
 
@@ -4210,9 +4219,10 @@ function totalBlockHours(records){
    day off, the same as the others. */
 function rosterDayOffKind(duty){
   const s = String(duty || "").trim().toUpperCase();
-  if(/^AL(\s|$)/.test(s)) return "al";
-  if(/^SL(\s|$)/.test(s)) return "sl";
-  if(/^DO-?R(\s|$)/.test(s)) return "dor";     /* the day off requested */
+  /* the sheet may put a full stop after the code - "AL." is an annual leave */
+  if(/^AL[.,:;]?(\s|$)/.test(s)) return "al";
+  if(/^SL[.,:;]?(\s|$)/.test(s)) return "sl";
+  if(/^DO-?R[.,:;]?(\s|$)/.test(s)) return "dor";     /* the day off requested */
   if(/^DO/.test(s)) return "do";              /* any other day off code */
   return "";
 }
@@ -4824,7 +4834,7 @@ document.getElementById("ocr-clear").addEventListener("click", () => {
    Crew A is the first crew member listed and Crew B the second. */
 /* The type of an imported row — the duty column decides it. */
 function rowDutyType(r){
-  const dutyVal = (r.flight || "").toUpperCase();
+  const dutyVal = dutyCodeKey(r.flight || "");
   /* a day off, a day off requested (DO-R) and an annual leave are all days off */
   if(isDayOffCode(dutyVal)) return "DO";
   if(dutyVal === "STBY") return "Standby";
